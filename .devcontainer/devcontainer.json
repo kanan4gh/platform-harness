@@ -1,0 +1,46 @@
+{
+  "name": "claude-aws-devcontainer-starter",
+
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+
+    "ghcr.io/devcontainers/features/node:1": {},
+
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+
+  "mounts": [
+    "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached"
+  ],
+
+  "containerEnv": {
+    "AWS_PROFILE": "your-profile",
+    "AWS_REGION": "ap-northeast-1",
+    "AWS_DEFAULT_REGION": "ap-northeast-1"
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-azuretools.vscode-docker",
+        "amazonwebservices.aws-toolkit-vscode",
+        "tamasfe.even-better-toml"
+      ],
+
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.terminal.activateEnvironment": true
+      }
+    }
+  }
+}
