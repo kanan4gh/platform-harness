@@ -1,4 +1,4 @@
-# claude-aws-devcontainer-starter
+# platform-harness
 
 スペック駆動開発（Claude Code）＋ AWS開発のためのDevcontainerスターターテンプレート。
 
