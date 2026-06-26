@@ -6,3 +6,7 @@ dist/
 .pytest_cache/
 .pyright/
 .claude/settings.local.json
+
+# ステアリング作業ディレクトリはテンプレート複製対象外
+.steering/*
+!.steering/example/
