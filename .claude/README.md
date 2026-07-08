@@ -7,7 +7,11 @@
 ```
 .claude/
 ├── README.md              # このファイル
-├── settings.json          # Claude Code設定（パーミッション等）
+├── settings.json          # Claude Code設定（パーミッション・フック登録）
+├── hooks/                 # フックスクリプト（検証層: 規律の機械的強制）
+│   ├── check_tasklist_complete.py   # Stopフック
+│   ├── remind_tasklist_update.py    # PostToolUseフック
+│   └── state/             # 揮発状態（Git管理外）
 ├── commands/              # スラッシュコマンド（/コマンド名で呼び出す）
 │   ├── setup-project.md   # /setup-project
 │   ├── add-feature.md     # /add-feature
@@ -29,21 +33,7 @@
 
 ## settings.json
 
-```json
-{
-  "defaultMode": "bypassPermissions",
-  "permissions": {
-    "allow": [
-      "Skill(prd-writing)",
-      "Skill(functional-design)",
-      "Skill(architecture-design)",
-      "Skill(repository-structure)",
-      "Skill(development-guidelines)",
-      "Skill(glossary-creation)"
-    ]
-  }
-}
-```
+パーミッション(ドキュメント作成スキル6つのallow)とフック2つを登録している。
 
 ### 設定の意味
 
@@ -51,6 +41,22 @@
 |------|----|------|
 | `defaultMode` | `bypassPermissions` | Claudeがツールを実行する際のパーミッション確認をスキップ。ドキュメント作成スキルの連続実行をスムーズにするため |
 | `permissions.allow` | スキル6つ | 上記6つのスキルは確認なしに自動実行される |
+| `hooks.Stop` | check_tasklist_complete.py | 最新ステアリングのtasklist.mdに未完了タスク(`[ ]`)が残っているとセッション終了をブロック |
+| `hooks.PostToolUse` | remind_tasklist_update.py | Edit/Writeが5回続いてもtasklist.mdが更新されない場合にリマインドを注入(非強制) |
+
+### フック（hooks/）
+
+プロセス規律を「プロンプトによるお願い」ではなく「機構による強制」で担保する検証層。フックは標準ライブラリのみ・fail-open(実行時例外は exit 0 で作業を止めない)・判定ロジックの純関数分離、を設計原則とする。
+
+**運用上の注意**:
+- settings.json のフック登録は同一セッション中に有効化される
+- フックが対象とするステアリングディレクトリは `YYYYMMDD-` 接頭辞を持つものだけ。`.steering/example/` 等の規約外ディレクトリは無視される(「名前ソート=日付ソート」の暗黙仮定は規約外ディレクトリの混入で壊れるため、対象を正規表現で明示している)
+
+**フックの追加手順**(3点セット+2層検証):
+1. `.claude/hooks/` にスクリプトを追加(標準ライブラリのみ・fail-open)
+2. `tests/hooks/` にユニットテストを追加し `uv run pytest` で検証(tmp_pathで擬似リポジトリを構築)
+3. `settings.json` に登録
+4. **実プロトコル起動で確認する**: `echo '{}' | CLAUDE_PROJECT_DIR=$PWD python3 .claude/hooks/xxx.py`(ユニットテストは実データの多様性を想定できないため、この確認を省略しない)
 
 ### settings.local.json について
 
@@ -155,7 +161,7 @@
 - `design.md` - 実装設計のひな形
 - `tasklist.md` - タスクリストのひな形
 
-**設計上の重要原則**: tasklist.mdの全タスクが `[x]` になるまで作業を継続します。スキップは技術的な理由がある場合のみ許可されます。
+**設計上の重要原則**: tasklist.mdの全タスクが `[x]` になるまで作業を継続します。スキップは技術的な理由がある場合のみ許可されます。この規律はスキル本文の記述ではなく**フック**(hooks/)が機械的に強制します(規律の配置原則)。
 
 ---
 
