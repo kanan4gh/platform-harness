@@ -10,3 +10,6 @@ dist/
 # ステアリング作業ディレクトリはテンプレート複製対象外
 .steering/*
 !.steering/example/
+
+# フックの揮発状態(セッションローカル)
+.claude/hooks/state/
