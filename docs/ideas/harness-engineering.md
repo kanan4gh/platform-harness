@@ -188,3 +188,18 @@ MCP サーバーもプラットフォームハーネスと同じ2層構造で考
 | **テンプレート** | skills/steering/templates/ ← **型** | .steering/YYYYMMDD-xxx/ ← **型+内容** |
 | **寿命** | プロジェクトをまたいで持続 | 1作業単位で完結（履歴として保持） |
 | **更新契機** | 洗練・学びのたびに随時 | 実装のたびに新規作成 |
+
+## /harness-doctor 構想（2026-07-09 追記）
+
+_project-uroboros-neo からの環流（蒸留レポート候補5の派生）_
+
+技術スタック定義（CLAUDE.md）と各コマンド・スキル内のコマンド記述の不整合を自動検出するスキルの構想。
+
+**動機**: uroboros-neo で「add-feature.md の検証コマンドが npm 系のまま、実スタックは uv/pytest」という不整合が発見された。この種の不整合はテンプレート複製のたびに再発しうるが、発見は偶然に頼っていた。
+
+**検出対象の例**:
+- CLAUDE.md 技術スタック固有層のコマンドと、commands/・skills/ 内の `Bash(...)` 記述の不一致
+- スキルの frontmatter `allowed-tools` と本文が要求するツールの不一致（実例: steering スキルが Edit を要求するのに allowed-tools に無かった）
+- settings.json のフック登録パスと hooks/ 実体の不一致
+
+**位置づけ**: まずは harness-guide.md の複製時チェックリスト（手動）で運用し、チェック項目が安定したらスキル化する。
