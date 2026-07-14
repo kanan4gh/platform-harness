@@ -13,3 +13,4 @@ dist/
 
 # フックの揮発状態(セッションローカル)
 .claude/hooks/state/
+.codex/hooks/state/

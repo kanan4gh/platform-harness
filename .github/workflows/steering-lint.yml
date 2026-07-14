@@ -1,0 +1,29 @@
+name: steering-lint
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  steering-lint:
+    name: ステアリング規律lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run steering lint
+        run: python3 scripts/steering_lint.py
+
+  tests:
+    name: pytest + ruff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        run: uv sync
+      - name: Run tests
+        run: uv run pytest
+      - name: Run lint
+        run: uv run ruff check .
