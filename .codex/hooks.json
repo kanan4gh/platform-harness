@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codex/hooks/check_tasklist_complete.py",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

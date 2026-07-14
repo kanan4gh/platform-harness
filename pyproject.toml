@@ -17,10 +17,12 @@ testpaths = ["tests"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-include = ["*.py", ".claude/hooks/*.py"]
+include = ["*.py", ".claude/hooks/*.py", ".codex/hooks/*.py", "scripts/*.py"]
 
 [tool.basedpyright]
-include = [".claude/hooks", "tests"]
+include = [".claude/hooks", ".codex/hooks", "tests", "scripts"]
+# フックが scripts/steering_lint.py をimportするための解決パス
+extraPaths = ["scripts"]
 pythonVersion = "3.12"
 # フックをimportlibで動的ロードするテストの reportAny ノイズを避けるため standard とする
 typeCheckingMode = "standard"

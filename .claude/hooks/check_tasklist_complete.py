@@ -1,32 +1,27 @@
-"""Stopフック: 進行中ステアリング作業のtasklist.mdに未完了タスクが残っていれば終了をブロックする。"""
+"""Stopフック: 進行中ステアリング作業のtasklist.mdに未完了タスクが残っていれば終了をブロックする。
+
+判定ロジックは scripts/steering_lint.py(ハーネス中立のlint CLI)と共有する。
+このフックを他プロジェクトへ配布する場合は scripts/steering_lint.py とセットで移植すること。
+"""
 
 import json
 import os
-import re
 import sys
 from pathlib import Path
 from typing import Any
 
+# 判定ロジックの解決はフック自身の位置基準(リポジトリ直下/scripts)。
+# CLAUDE_PROJECT_DIR 基準にしないのは、検査対象プロジェクトとフック設置場所が別になる
+# テスト環境でも動作させるため。
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+try:
+    from steering_lint import find_incomplete_tasks, find_latest_tasklist  # noqa: E402
+except ImportError:
+    # fail-open: scripts/steering_lint.py 不在の環境ではフックを無効化する
+    # (規律の最終ゲートはCIのlintが担う)
+    sys.exit(0)
+
 MAX_LISTED_TASKS = 5
-INCOMPLETE_PATTERN = re.compile(r"^\s*- \[ \] (.+)$", re.MULTILINE)
-# 日付接頭辞を持つ作業ディレクトリのみが対象(example/ 等のサンプルを誤検出しない)
-STEERING_DIR_PATTERN = re.compile(r"^\d{8}-")
-
-
-def find_latest_tasklist(project_root: Path) -> Path | None:
-    """最新(日付降順の先頭)のステアリングディレクトリのtasklist.mdを返す。"""
-    steering = project_root / ".steering"
-    if not steering.is_dir():
-        return None
-    dirs = sorted(
-        (p for p in steering.iterdir() if p.is_dir() and STEERING_DIR_PATTERN.match(p.name)),
-        key=lambda p: p.name,
-        reverse=True,
-    )
-    if not dirs:
-        return None
-    tasklist = dirs[0] / "tasklist.md"
-    return tasklist if tasklist.is_file() else None
 
 
 def check(event: dict[str, Any], project_root: Path) -> dict[str, Any] | None:
@@ -39,7 +34,7 @@ def check(event: dict[str, Any], project_root: Path) -> dict[str, Any] | None:
     if tasklist is None:
         return None
 
-    incomplete = INCOMPLETE_PATTERN.findall(tasklist.read_text(encoding="utf-8"))
+    incomplete = find_incomplete_tasks(tasklist.read_text(encoding="utf-8"))
     if not incomplete:
         return None
 

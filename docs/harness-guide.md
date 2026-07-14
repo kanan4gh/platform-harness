@@ -1,14 +1,25 @@
 # platform-harness テンプレートガイド
 
-スペック駆動開発（Claude Code）＋ AWS開発のためのDevcontainerスターターテンプレートの使い方ガイドです。
+スペック駆動開発（AIコーディングエージェント）＋ AWS開発のためのDevcontainerスターターテンプレートの使い方ガイドです。
 
 ## このテンプレートについて
 
 以下をすぐに使える状態で提供します:
 
 - **Devcontainer環境**: Claude Code・AWS CLI・CDK・SAM CLI・GitHub CLI がセットアップ済み
-- **スペック駆動開発**: CLAUDE.md テンプレート・docs/ ひな形・ステアリングファイル・カスタムスキル一式
+- **スペック駆動開発**: AGENTS.md(SDDプロセス正典)・ハーネスアダプタ(CLAUDE.md等)・docs/ ひな形・ステアリングファイル・カスタムスキル一式
 - **AWS認証**: `~/.aws/` バインドマウントによる AWS Profile 認証
+
+SDDプロセスの正典はハーネス中立の `AGENTS.md` にあり、各AIコーディングエージェント(ハーネス)固有の運用差分はアダプタが定義します(換装の構想と経緯は `docs/ideas/harness-swap.md` を参照)。
+
+### ハーネスの選択
+
+| ハーネス | アダプタ | 呼び出し方 |
+|---------|---------|-----------|
+| Claude Code | `CLAUDE.md` + `.claude/` | スラッシュコマンド(`/add-feature` 等)・スキル自動ロード |
+| Codex CLI | `.codex/` + `.agents/skills/`(詳細は `.codex/README.md`) | チャットで「add-featureを実行して」等。初回にプロジェクトのtrustが必要 |
+
+どちらのハーネスでも同じ正典・手順書・強制力(Stopフック+lint/CI)でSDDフローが回り、成果物(`.steering/`)は相互運用できます(併用規約は `AGENTS.md` を参照)。
 
 ## 前提条件
 
@@ -50,24 +61,13 @@ postCreate.sh が自動実行され、以下がインストールされます:
 aws sts get-caller-identity
 ```
 
-### 5. CLAUDE.md をカスタマイズ
+### 5. AGENTS.md をカスタマイズ
 
-`CLAUDE.md` のプロダクト固有層・技術スタック固有層をプロダクトに合わせて書き換えます。
+`AGENTS.md` のプロダクト固有層・技術スタック固有層をプロダクトに合わせて書き換えます(ハーネス固有の運用を変える場合のみアダプタファイルも調整します)。
 
-### 6. 複製時チェックリストを確認
+### 6. プロジェクトをセットアップ
 
-テンプレートとプロジェクトの前提の違いを吸収します(見落とすとハーネスが壊れたまま動きます):
-
-- [ ] **技術スタックと検証コマンドの整合**: `CLAUDE.md` 技術スタック固有層のコマンドと、`.claude/commands/add-feature.md` の静的検証コマンドが一致しているか確認する
-  ```bash
-  grep -n "Bash(" .claude/commands/add-feature.md   # ← 技術スタックと見比べる
-  ```
-  不整合があると検証層が実質無効になります(実例: npm系コマンドが残ったままPython/uvプロジェクトとして運用され、検証が一度も実行されなかった)
-- [ ] **`.steering/` のGit管理**: プロジェクトでは `.gitignore` の `.steering/*` 除外を**解除**する(作業履歴は蒸留・振り返りの入力になるため残す価値がある)。テンプレート側の除外は「複製時に前プロジェクトの履歴を持ち込まない」ためのもので、プロジェクト運用では逆になる
-
-### 7. プロジェクトをセットアップ
-
-Claude Code で以下を実行します:
+AIコーディングエージェント(Claude Code等)で以下を実行します:
 
 ```
 /setup-project
@@ -79,7 +79,7 @@ Claude Code で以下を実行します:
 
 | ツール | 用途 |
 |--------|------|
-| Claude Code | AI駆動開発 |
+| AIコーディングエージェント(Claude Code等) | AI駆動開発 |
 | AWS CLI | AWSリソース操作 |
 | AWS CDK | IaC（インフラのコード化） |
 | AWS SAM CLI | サーバーレス開発・デプロイ |
@@ -97,7 +97,7 @@ Claude Code で以下を実行します:
 4. gh release create でリリース
 ```
 
-詳細は `CLAUDE.md` を参照してください。
+詳細は `AGENTS.md` を参照してください。
 
 ---
 

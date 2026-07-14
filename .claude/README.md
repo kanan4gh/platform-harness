@@ -53,6 +53,8 @@
 
 - フックの追加は「スクリプト+テスト(`tests/hooks/`)+settings.json登録」の3点セットで行う
 - テストは `uv run pytest` で実行する
+- **配布時の注意**: `check_tasklist_complete.py` は判定ロジックを `scripts/steering_lint.py`(ハーネス中立のlint CLI)からimportする。他プロジェクトへ移植する場合は必ずセットでコピーすること(scripts/ 不在の環境ではfail-openによりフックが無言で無効化される。最終ゲートはCIのlintが担う)
+- **lintの自己言及(2段コミットフロー)**: 「PRを作成」タスクを持つステアリングは、完了記録のpush前はCIのsteering lintがC3違反で失敗する(仕様どおりの挙動)。PR作成→完了記録コミット→再pushの2段フローで運用する
 
 ### settings.local.json について
 
@@ -148,19 +150,19 @@
 
 - **モデル**: Claude Sonnet
 - **用途**: `/review-docs` コマンドから呼び出され、ドキュメントを5観点（完全性・明確性・一貫性・実装可能性・測定可能性）で評価してレポートを作成する
-- **ドキュメント種別対応**: PRD・機能設計書・アーキテクチャ設計書・リポジトリ構造定義書・開発ガイドライン・用語集それぞれに特化したチェック項目を持つ
+- **観点の正**: `docs/procedures/review-docs.md`(エージェント定義はそれを参照する役割宣言のみ)
 
 ### `implementation-validator`
 
 - **モデル**: Claude Sonnet
 - **用途**: `/add-feature` の4段検証・段4で呼び出される。ステアリングファイル（requirements.md / design.md / tasklist.md）と実装の整合性検証に特化
-- **非責務**: コード品質・テスト・セキュリティ・パフォーマンスは段1〜3（静的検証・`/verify`・`/code-review`）が担うため検証しない
+- **観点の正**: `docs/procedures/validate-implementation.md`(エージェント定義はそれを参照する役割宣言のみ)
 
 ---
 
 ## スキル（skills/）
 
-スキルはClaude Codeの内部で `Skill('スキル名')` として呼び出されます。各スキルは `SKILL.md`（動作定義）とテンプレートファイルで構成されています。
+スキルはClaude Codeの内部で `Skill('スキル名')` として呼び出されます。**プロセス系スキル(steering / distill)は、手順の正である `docs/procedures/` の手順書を参照する薄いラッパ**です(ハーネス換装第3弾。SKILL.mdにはfrontmatterとClaude固有注記のみを置く)。ドキュメント作成系スキルは従来どおり `SKILL.md`（手順）とテンプレートで構成されています。
 
 ### `steering` スキル
 
@@ -174,7 +176,9 @@
 | 実装モード | タスク実行中 | tasklist.mdをリアルタイムで更新（`[ ]`→`[x]`）し、進捗を追跡 |
 | 振り返りモード | 全タスク完了後 | tasklist.mdの振り返りセクションに完了日・学びを記録 |
 
-**テンプレートファイル** (`skills/steering/templates/`):
+**手順の正**: `docs/procedures/steering.md`(SKILL.mdはそれを参照するラッパ)
+
+**テンプレートファイル** (`docs/procedures/templates/`):
 - `requirements.md` - ステアリング要求定義のひな形
 - `design.md` - 実装設計のひな形
 - `tasklist.md` - タスクリストのひな形
@@ -225,12 +229,12 @@
   ```
 ```
 
-**注意**: 技術スタック定義（CLAUDE.md）と検証コマンドの不整合は検証層を無効化します。複製時のチェックリストに含めてください。
+**注意**: 技術スタック定義（AGENTS.md技術スタック固有層）と検証コマンドの不整合は検証層を無効化します。複製時のチェックリストに含めてください。
 
 ### 新しいスキルを追加する
 
-1. `skills/新スキル名/SKILL.md` を作成（スキルの動作定義）
-2. 必要に応じて `skills/新スキル名/template.md` を追加
+1. プロセス系(他ハーネスでも使う手順)の場合、手順本文は `docs/procedures/新手順名.md` に置き、`skills/新スキル名/SKILL.md` はそれを参照する薄いラッパにする。Claude専用スキルなら `SKILL.md` に直接書いてよい
+2. 必要に応じてテンプレートを追加(プロセス系は `docs/procedures/` 側に同居)
 3. `settings.json` の `permissions.allow` に `"Skill(新スキル名)"` を追加
 4. 呼び出し元コマンドやスキルから `Skill('新スキル名')` で参照
 
