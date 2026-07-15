@@ -26,7 +26,7 @@
 
 `.codex/` 配下のフック・エージェント定義は、**Codex CLIでプロジェクトをtrust(信頼)した場合のみ**ロードされます。初回起動時のtrust確認に同意してください。
 
-**重要(実地検証 2026-07-14 での発見)**: フックは hooks.json 単位のtrust承認(`~/.codex/config.toml` にハッシュ登録)が必要で、承認は**対話セッションでの確認**によって行われます。`codex exec`(非対話)では未承認のフックは**無言でロードされません**。換装・併用の初回は、対話セッションを一度起動してフックの承認を済ませてから使ってください(未承認でも steering lint+CI の最終ゲートは機能します)。
+**重要**: フックは hooks.json 単位のtrust承認(`~/.codex/config.toml` にハッシュ登録)が必要で、承認は**対話セッションでの確認**によって行われます。換装・併用の初回は、対話セッションを起動してフックの承認を済ませてください。非対話モードはtrust確認と標準受け入れに使用しません。未承認でもローカル品質ゲートが最終検出します。
 
 ## 推奨設定
 
@@ -40,10 +40,10 @@
 | 項目 | Claude Code | Codex |
 |------|-------------|-------|
 | Stopフック(未完了タスクの終了ブロック) | あり(`stop_hook_active` でループ防止) | **あり**(連続ブロックガードでループ防止) |
-| 編集中のtasklistリマインド(PostToolUse) | あり | **なし**(既知の劣化。Stopフックとlint+CIが最終捕捉) |
+| 編集中のtasklistリマインド(PostToolUse) | あり | **なし**(既知の劣化。Stopフックとローカル品質ゲートが最終捕捉) |
 | 承認UI | AskUserQuestion(選択式) | テキスト方式(AGENTS.md正文) |
 | サブエージェント | .claude/agents/*.md | .codex/agents/*.toml |
 
 ## フックの配布時の注意
 
-`check_tasklist_complete.py` は判定ロジックを `scripts/steering_lint.py` からimportします。他プロジェクトへ移植する場合は必ずセットでコピーしてください(不在の環境ではfail-openによりフックが無言で無効化されます。最終ゲートはCIのlintが担います)。
+`check_tasklist_complete.py` は判定ロジックを `scripts/steering_lint.py` からimportします。他プロジェクトへ移植する場合は必ずセットでコピーしてください(不在の環境ではfail-openによりフックが無言で無効化されます。最終ゲートはローカル品質ゲートが担います)。初回trustと実機受け入れは`docs/procedures/harness-acceptance.md`に従い、対話型セッションで行います。
