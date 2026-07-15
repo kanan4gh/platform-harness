@@ -36,12 +36,12 @@
 
 ## フェーズ2: 4段検証
 
-- [ ] 段1・静的検証
+- [x] 段1・静的検証
   - [x] `uv run pytest tests/procedures/test_derived_project_rollout.py`（14 passed）
   - [x] `uv run pytest`（143 passed）
   - [x] `uv run ruff check .`（合格）
   - [x] `uv run basedpyright`（0 errors / 0 warnings）
-  - [ ] `uv run python3 scripts/local_quality_gate.py`
+  - [x] `uv run python3 scripts/local_quality_gate.py`（最終完了記録状態で成功）
 - [x] 段2・台帳を表解析し、outfit-studioの完了状態とremote一意性を観察する（14件の構造テストで合格）
 - [x] 段3・変更差分を独立レビューし、正当な指摘を修正する（PR #22裁定記録の不足を修正し、再レビューでマージ阻害指摘0件）
 - [x] 段4・steeringと台帳更新のスペック準拠を独立検証する（実装済み範囲は準拠、未記録の設計変更・スコープ外逸脱なし）
@@ -53,11 +53,11 @@
 
 > steering lintの自己参照を解消するため、commit・PR URL記録後に全完了状態を固定し、最終ローカル品質ゲートを実行して再pushする。
 
-- [ ] requirements.mdの受け入れ条件がすべて満たされたことを確認する
-- [ ] 実装後の振り返りを記録する
-- [ ] Issue #20を参照するConventional Commitを作成する
-- [ ] branchをpushして台帳更新専用PRを作成する
-- [ ] PR URLと最終検証結果を記録・報告する
+- [x] requirements.mdの受け入れ条件がすべて満たされたことを確認する（6/6件充足）
+- [x] 実装後の振り返りを記録する
+- [x] Issue #20を参照するConventional Commitを作成する（`cb6240a`）
+- [x] branchをpushして台帳更新専用PRを作成する（PR #21）
+- [x] PR URLと最終検証結果を記録・報告する（https://github.com/kanan4gh/platform-harness/pull/21）
 
 ---
 
@@ -68,35 +68,38 @@
 - outfit-studio Issue: https://github.com/kanan4gh/outfit-studio/issues/25
 - 同期元: platform-harness `v1.3.0 / bd2cd8c537fe257353e3efd19c1ea2407d6d6e66`
 - 台帳更新Issue: https://github.com/kanan4gh/platform-harness/issues/20
-- ローカル品質ゲート: 未実行
+- ローカル品質ゲート: 2026-07-15 最終完了記録状態で成功
 - GitHub Actions自動run: 0件
 - 有料LLM headless mode: 0件
-- 台帳更新PR: 未作成
+- 台帳更新PR: https://github.com/kanan4gh/platform-harness/pull/21
 
 ## 実装後の振り返り
 
 ### 実装完了日
 
-未定
+2026-07-15
 
 ### 計画と実績の差分
 
-- 未記入
+- 独立レビューで、要求にあるPR #22の阻害要因解消が台帳のDecision欄へ未記載と判明したため、「PR #22は不要としてclose」を台帳・設計・テストへ追加した。
+- steeringは配布用`.gitignore`で除外されるため、今回の3ファイルを`git add -f`で明示的にcommitした。
 
 ### 学んだこと
 
-- 未記入
+- `synced`への状態遷移はState列だけでなく、旧阻害要因の裁定、同期元、次回戦略を同じ行へ揃えて初めて監査可能になる。
+- G4後の台帳更新を別PRにすることで、派生側の実装PRと正典側の観測記録を分離できる。
 
 ### 次回への改善提案
 
-- 未記入
+- 台帳更新の構造テストでは最終状態だけでなく、直前の阻害要因がどう解消されたかも固定する。
+- 将来はG4完了記録から台帳行の候補差分を生成する読み取り専用補助を検討できるが、自動展開は引き続き行わない。
 
 ### リリース判断
 
 | 観点 | 評価 |
 |---|---|
-| ユーザー価値 | 未評価 |
-| 重大バグ | 未評価 |
-| バージョン種別 | 未評価 |
+| ユーザー価値 | outfit-studioの同期状態と次回戦略を台帳から正確に判断できる |
+| 重大バグ | 独立再レビューでマージ阻害指摘0件 |
+| バージョン種別 | リリース不要（台帳の観測記録のみ） |
 
-**提案**: 未定
+**提案**: platform-harnessの新releaseは作成せず、台帳更新PRとしてマージする。
