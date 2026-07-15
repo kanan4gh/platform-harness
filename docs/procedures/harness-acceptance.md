@@ -31,7 +31,7 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 1. 対象commitまたはtagを`/private/tmp`配下へ複製する
 2. 未コミット変更がないことを確認する
 3. 既存ステアリングより辞書順で後になる確認専用の最小steeringを人が作る
-4. `find .steering -mindepth 2 -maxdepth 2 -name tasklist.md -print | sort | tail -1`で選択対象を確認する
+4. `find .steering -mindepth 1 -maxdepth 1 -type d -name '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*' -print | sort | tail -1`で、lintと同じ日付接頭辞の選択対象を確認する
 5. 記録テンプレートを対象ステアリング内の`acceptance-record.md`へ複製する
 6. ハーネス名、バージョン、IDE / CLI、設定、対象commitを記録する
 7. プロンプトは読み取り確認と安全な一時ファイル操作に限定する

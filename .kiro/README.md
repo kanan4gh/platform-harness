@@ -91,7 +91,8 @@ Stopフックとlintの実機確認だけを行い、製品ファイルは変更
 選択対象を確認します。
 
 ```bash
-find .steering -mindepth 2 -maxdepth 2 -name tasklist.md -print | sort | tail -1
+find .steering -mindepth 1 -maxdepth 1 -type d \
+  -name '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*' -print | sort | tail -1
 ```
 
 ### IDE
