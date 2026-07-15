@@ -134,7 +134,7 @@ def test_catalog_contains_initial_candidates_and_priorities() -> None:
     )
     assert all(remote in text for remote in expected)
     assert re.search(r"project-uroboros-neo.*`direct-sync`.*P0", text)
-    assert re.search(r"outfit-studio.*`migrate-then-sync`.*P0", text)
+    assert re.search(r"outfit-studio.*`direct-sync`.*P0", text)
 
 
 def test_catalog_does_not_duplicate_operated_outfit_remote() -> None:
@@ -145,11 +145,19 @@ def test_catalog_does_not_duplicate_operated_outfit_remote() -> None:
     assert "運用コピー" in text
 
 
-def test_catalog_holds_outfit_while_overlapping_sync_pr_is_open() -> None:
-    text = catalog_text()
-    row = next(line for line in text.splitlines() if line.startswith("| `kanan4gh/outfit-studio`"))
-    assert "`on-hold`" in row
-    assert "PR #22" in row
+def test_catalog_records_completed_outfit_v1_3_0_rollout() -> None:
+    rows = catalog_rows()
+    outfit_rows = [row for row in rows if row["Remote"] == "`kanan4gh/outfit-studio`"]
+    assert len(outfit_rows) == 1
+    row = outfit_rows[0]
+    assert row["Harness generation"] == "`current-neutral`"
+    assert row["Strategy"] == "`direct-sync`"
+    assert row["State"] == "`synced`"
+    assert row["Last source"] == "`v1.3.0 / bd2cd8c`"
+    assert "PR #26" in row["Lineage evidence"]
+    assert "PR #22は不要としてclose" in row["Decision / next action"]
+    assert "PR #26" in row["Decision / next action"]
+    assert "clean clone / worktree" in row["Local caution"]
 
 
 def test_procedure_defines_unit_preflight_and_manifest() -> None:
