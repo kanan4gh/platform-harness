@@ -42,10 +42,12 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 
 1. 複製環境をClaude Code IDEまたは対話型CLIで開く
 2. `AGENTS.md`と`CLAUDE.md`、主要スキルが表示されることを確認する
-3. 指定した安全なファイルを読ませ、内容に基づく確認文字列を回答させる
-4. 読み取り、書き込み、shellを別々に依頼して承認境界を観察する
-5. 未完了tasklistに対するStopフックのblockまたはfeedbackを確認する
-6. 実結果と証跡を記録する
+3. 現行版では`/agents`一覧wizardを前提にせず、`@`候補で必要なsubagentsが表示されるか、名前を明示した対話型依頼で実起動できることを確認する
+4. 指定した安全なファイルを読ませ、内容に基づく確認文字列を回答させる
+5. 読み取り、書き込み、shellを別々に依頼して承認境界を観察する
+6. 未完了sentinel tasklistに対するStopフックのblockまたはfeedbackを確認する
+7. 最初のblockまたは自動継続を観察した直後に`Ctrl+C`で中断し、agentにsentinelを完了・更新させない
+8. 実結果と証跡を記録する
 
 ## Codex
 
@@ -54,8 +56,9 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 3. `.codex/hooks.json`のtrust確認が必要なら対話画面で承認する
 4. 指定した安全なファイルの実読込を確認する
 5. 読み取り、書き込み、shellを別々に依頼してsandbox / approvalを観察する
-6. 未完了tasklistに対するStopフックのblockまたはfeedbackを確認する
-7. 実結果と証跡を記録する
+6. 未完了sentinel tasklistに対するStopフックのblockまたはfeedbackを確認する
+7. feedback表示または最初の自動継続を観察した直後に`Ctrl+C`で中断し、agentにsentinelを完了・更新させない
+8. 実結果と証跡を記録する
 
 ## Kiro IDE
 
@@ -73,9 +76,10 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 2. `/context`で`AGENTS.md`と5 skillsが各1回だけ表示されることを確認する
 3. 指定ファイルの実読込を確認する
 4. read事前許可とwrite / shellの承認UIを個別に確認する
-5. 未完了tasklistに対してStopフックがstdout block decisionを返すことを確認する
-6. 入力異常・状態破損のfail-openはpytest結果と照合する
-7. 実結果と証跡を記録する
+5. 人が固定した未完了sentinel tasklistに対してStopフックがstdout block decisionを返すことを確認する。reasonがUIに出ずモデルの自動継続だけが見える場合は、状態カウンタの増加を補助証跡にする
+6. 最初の自動継続を確認した時点で、write要求を拒否して`Ctrl+C`で中断する。連続ブロックガードを実機で最後まで消費させない
+7. 入力異常・状態破損のfail-openはpytest結果と照合する
+8. 実結果と証跡を記録する
 
 ## 判定
 

@@ -85,7 +85,7 @@ Stopフックとlintの実機確認だけを行い、製品ファイルは変更
 
 ```markdown
 # タスクリスト
-- [ ] Stop smoke test
+- [ ] Stop smoke sentinel（agentは完了・更新しない。最初のblock後に人が中断する）
 ```
 
 選択対象を確認します。
@@ -109,8 +109,9 @@ find .steering -mindepth 1 -maxdepth 1 -type d \
 - `/context`で5 skillsが各1回だけ表示される
 - 指定ファイルが実際に読まれた証跡を確認する
 - shellとwriteを別々に依頼し、承認画面で拒否する
-- 未完了tasklistを残して応答を終了し、Stop blockが作業継続を要求することを確認する
-- 継続は承認せず`Ctrl+C`で中断する
+- 未完了tasklistを残して応答を終了し、Stop blockによる自動継続を確認する。Kiro CLIの版によってはstdout reasonがUIに表示されず、モデルの継続だけが見える
+- モデルがtasklist更新を試みた場合はwriteを拒否する。最初の自動継続を確認した時点で`Ctrl+C`で中断し、write再試行やルールBの誤用を誘発させない
+- 発火が画面だけでは判別できない場合、`.kiro/hooks/state/stop_guard.json`の`consecutive_blocks`増加を補助証跡にする
 - `uv run python3 scripts/steering_lint.py`が確認用tasklistをC3、exit 1として検出する
 
 観察結果は配布文書へ固定せず、作業単位の受け入れ記録へ保存します。未観察項目は合格に含めず、合格・不合格・保留・対象外を分けます。
