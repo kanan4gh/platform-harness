@@ -53,8 +53,9 @@
 
 - フックの追加は「スクリプト+テスト(`tests/hooks/`)+settings.json登録」の3点セットで行う
 - テストは `uv run pytest` で実行する
-- **配布時の注意**: `check_tasklist_complete.py` は判定ロジックを `scripts/steering_lint.py`(ハーネス中立のlint CLI)からimportする。他プロジェクトへ移植する場合は必ずセットでコピーすること(scripts/ 不在の環境ではfail-openによりフックが無言で無効化される。最終ゲートはCIのlintが担う)
-- **lintの自己言及(2段コミットフロー)**: 「PRを作成」タスクを持つステアリングは、完了記録のpush前はCIのsteering lintがC3違反で失敗する(仕様どおりの挙動)。PR作成→完了記録コミット→再pushの2段フローで運用する
+- **配布時の注意**: `check_tasklist_complete.py` は判定ロジックを `scripts/steering_lint.py`(ハーネス中立のlint CLI)からimportする。他プロジェクトへ移植する場合は必ずセットでコピーすること(scripts/ 不在の環境ではfail-openによりフックが無言で無効化される。最終ゲートはローカル品質ゲートが担う)
+- **lintの自己言及(2段コミットフロー)**: 「PRを作成」タスクを持つステアリングは、完了記録前のsteering lintでC3違反になる(仕様どおりの挙動)。PR作成→完了記録コミット→再pushの2段フローで運用する
+- 初回trust、承認UI、Stop発火の確認は`docs/procedures/harness-acceptance.md`に従い、対話型セッションで行う
 
 ### settings.local.json について
 
