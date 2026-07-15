@@ -138,7 +138,7 @@ platform-harnessから作成されたプロジェクトには、現在の`AGENTS
 ### 検証
 
 - [x] 台帳と手順の必須契約を構造テストで検証できる。
-- [ ] `uv run python3 scripts/local_quality_gate.py`が合格する。
+- [x] `uv run python3 scripts/local_quality_gate.py`が合格する。
 - [x] 検証中のGitHub Actions自動runと有料LLM headless mode起動が0件である。
 
 ## 成功指標
