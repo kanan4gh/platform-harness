@@ -31,12 +31,12 @@ outfit-studioのplatform-harness v1.3.0移行PR #26がG4でマージされた事
 
 ## 受け入れ条件
 
-- [ ] outfit-studio行のHarness generation / Strategy / State / Last sourceがマージ実態と一致する。
-- [ ] outfit-studioのremote行が引き続き1件だけである。
-- [ ] 他の派生候補行が変更されていない。
-- [ ] 台帳構造テストと単一ローカル品質ゲートが成功する。
-- [ ] GitHub Actions自動runと有料LLM headless mode起動が0件である。
-- [ ] Issue #20を参照する専用PRが作成される。
+- [x] outfit-studio行のHarness generation / Strategy / State / Last sourceがマージ実態と一致する。
+- [x] outfit-studioのremote行が引き続き1件だけである。
+- [x] 他の派生候補行が変更されていない。
+- [x] 台帳構造テストと単一ローカル品質ゲートが成功する。
+- [x] GitHub Actions自動runと有料LLM headless mode起動が0件である。
+- [x] Issue #20を参照する専用PRが作成される。
 
 ## スコープ外
 
