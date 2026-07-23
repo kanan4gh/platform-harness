@@ -34,15 +34,15 @@
 
 > PR URLを記録した後に全完了状態を固定し、最終ローカル品質ゲートを再実行して最終記録をpushする。
 
-- [ ] Issue #22を参照するConventional Commitを作成する
-- [ ] ブランチをpushし、Issue #22を参照するPRを作成する
-- [ ] PR URLと完了証拠を記録する
-- [ ] GitHub Actions自動runと有料LLM headless mode起動が0件であることを確認する
-- [ ] 今回の`requirements.md`の受け入れ条件を実態に合わせて更新する
-- [ ] 実装後の振り返りを記録する
-- [ ] tasklistの全項目が`[x]`であることを確認する
-- [ ] 最終完了記録状態で`uv run python3 scripts/local_quality_gate.py`が成功する
-- [ ] 最終記録をcommitしてpushする
+- [x] Issue #22を参照するConventional Commitを作成する（`81c7fc2`）
+- [x] ブランチをpushし、Issue #22を参照するPRを作成する（PR #23）
+- [x] PR URLと完了証拠を記録する（https://github.com/kanan4gh/platform-harness/pull/23）
+- [x] GitHub Actions自動runと有料LLM headless mode起動が0件であることを確認する
+- [x] 今回の`requirements.md`の受け入れ条件を実態に合わせて更新する（5/5件充足）
+- [x] 実装後の振り返りを記録する
+- [x] tasklistの全項目が`[x]`であることを確認する
+- [x] 最終完了記録状態で`uv run python3 scripts/local_quality_gate.py`が成功する（143 passed / Ruff合格 / basedpyright 0件 / steering lint合格 / metered automation lint合格）
+- [x] 最終記録をcommitしてpushする
 
 ---
 
@@ -50,35 +50,39 @@
 
 - 関連Issue: https://github.com/kanan4gh/platform-harness/issues/22
 - 補正対象: `.steering/20260715-zzzz-record-outfit-v1-3-0-rollout/requirements.md`
-- 補正PR: 実装後に記録
-- ローカル品質ゲート: 実装後に記録
-- GitHub Actions自動run: 実装後に記録
-- 有料LLM headless mode: 実装後に記録
+- 補正PR: https://github.com/kanan4gh/platform-harness/pull/23
+- ローカル品質ゲート: 2026-07-24 最終完了記録状態で成功（143 passed / Ruff合格 / basedpyright 0 errors・0 warnings / steering lint合格 / metered automation lint合格）
+- GitHub Actions自動run: 0件（PR #23作成後にActions APIで確認）
+- 有料LLM headless mode: 0件
 
 ## 実装後の振り返り
 
 ### 実装完了日
 
-実装後に記録する。
+2026-07-24
 
 ### 計画と実績の差分
 
-実装後に記録する。
+- tasklist承認前にStopフックが未完了タスクを検出して承認待ちを継続できなかったため、未承認中だけ`tasklist.pending.md`へ移し、ユーザー承認後に正式な`tasklist.md`へ戻した。
+- 中間のsteering lintはC3規則により未完了タスクを正しく検出した。設計と実装順序を更新し、steering lintを最終ローカル品質ゲート内で実行する形へ統合した。
+- 記録補正の対象は計画どおり、過去requirementsの6項目のチェック状態だけだった。
 
 ### 学んだこと
 
-実装後に記録する。
+- 完了タスクを拒否条件に持つlintを品質ゲートへ含める場合、PR URL等の完了証拠を先に記録し、全完了状態で最終ゲートを実行する順序が必要になる。
+- 過去記録の補正では、同じ作業のtasklist・完了証拠・Git履歴を根拠に限定すると、事実の再解釈を避けながら最小差分で整合性を回復できる。
 
 ### 次回への改善提案
 
-実装後に記録する。
+- 承認待ち中の未完了tasklistとStopフックの両立方法をsteering手順へ明文化する余地がある。
+- 完了状態を複数ファイルへ記録する作業では、最終ゲート前の更新順序をtasklist作成時に明示する。
 
 ### リリース判断
 
 | 観点 | 評価 |
 |---|---|
-| 今回の変更はユーザーにとって価値のあるまとまりか | 実装後に評価 |
-| 未解決の重大バグはないか | 実装後に評価 |
-| 適切なバージョン種別 | 実装後に評価 |
+| 今回の変更はユーザーにとって価値のあるまとまりか | Yes: 過去steeringの完了状態を一貫して確認できる |
+| 未解決の重大バグはないか | なし |
+| 適切なバージョン種別 | リリース不要 |
 
-**提案**: 実装後に記録する。
+**提案**: 記録補正だけのため、新しいplatform-harnessリリースは作成しない。
