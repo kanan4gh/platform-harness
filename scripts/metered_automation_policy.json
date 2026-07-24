@@ -37,6 +37,7 @@
   ],
   "exclude_paths": [
     ".steering",
+    ".claude/worktrees",
     "docs/ideas",
     "docs/external-automation-policy.md",
     "scripts/metered_automation_policy.json",
