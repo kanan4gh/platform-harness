@@ -42,7 +42,9 @@
    - `docs/procedures/templates/design.md` → `design.md`
    - `docs/procedures/templates/tasklist.md` → `tasklist.md`
 
-   **軽量パス適用時**(add-feature 手順の適用基準4項目をすべて満たし、requirements.md に「**軽量パス**: 適用」と判定結果を記録した場合)は、design.md を省略して requirements.md + tasklist.md の2ファイル構成とする(steering lint の C1 は宣言を検出して design.md 省略を許可する)。設計判断が発生しないことが適用条件のため、設計の記述は requirements.md の実装対象セクションで足りる
+   requirements.md の「パス判定」セクションには、**通常パス・軽量パスのどちらでも**基準4項目それぞれの判定結果を記録する(判定は add-feature 手順ステップ4.5で、選択したパスにかかわらずユーザーへ提示される)。
+
+   **軽量パス適用時**(適用基準4項目をすべて満たし、requirements.md に「**軽量パス**: 適用」の宣言行を置いた場合)は、design.md を省略して requirements.md + tasklist.md の2ファイル構成とする(steering lint の C1 は宣言を検出して design.md 省略を許可する)。設計判断が発生しないことが適用条件のため、設計の記述は requirements.md の実装対象セクションで足りる
 4. tasklist.mdはrequirements.md / design.mdに基づいて詳細化する:
    - 実装可能なタスクのみをリストアップする(「将来やるかも」「検討中」は含めない)
    - フェーズ分け・実装順序・サブタスクを明確にする。フェーズはテンプレートの「フェーズとステップの対応」に従い、**消化するステップごとに排他的に分割する**(実装フェーズ / 4段検証フェーズ / 振り返りとドキュメント更新フェーズ / 最終品質ゲートフェーズ)

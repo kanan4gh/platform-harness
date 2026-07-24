@@ -56,7 +56,7 @@
 - `design.md`: 実装アプローチ
 - `tasklist.md`: 具体的なタスクリスト
 
-**通常パスは上記3ファイル、軽量パスは `design.md` を省略した2ファイル**とする。軽量パスは add-feature 手順の適用基準4項目をすべて満たす場合にのみ選択でき、`requirements.md` に `- **軽量パス**: 適用` と判定結果を記録する(設計判断が発生しないことが適用条件のため、設計の記述は requirements.md の実装対象セクションで足りる)。基準と判定手順の正は `docs/procedures/add-feature.md` ステップ4にある。
+**通常パスは上記3ファイル、軽量パスは `design.md` を省略した2ファイル**とする。軽量パスは add-feature 手順の適用基準4項目をすべて満たす場合にのみ選択でき、`requirements.md` に `- **軽量パス**: 適用` の宣言行を置く。**判定結果(基準4項目それぞれ)は通常パス・軽量パスのどちらでも `requirements.md` の「パス判定」セクションに記録し、add-feature 手順ステップ4.5で選択したパスにかかわらずユーザーへ提示する**(設計判断が発生しないことが適用条件のため、設計の記述は requirements.md の実装対象セクションで足りる)。基準と判定手順の正は `docs/procedures/add-feature.md` ステップ4にある。
 
 命名規則: `20250115-add-user-profile` 形式
 
@@ -178,7 +178,15 @@ SDDプロセスの各手順(steering / distill / add-feature / review-docs / val
 - **development-guidelines.md** - 開発ガイドライン
 - **glossary.md** - ユビキタス言語定義
 
+本プロダクト固有の追加:
+
+- **harness-guide.md** - ハーネス運用ガイド
+- **external-automation-policy.md** - 外部自動化ポリシー（禁止する非対話LLM実行と検査範囲の正典）
+- **derived-projects.md** - 派生プロジェクト台帳
+
 推奨セット以外に必要なドキュメントがあればここに追記する。
+
+**この一覧は add-feature 手順の軽量パス基準3（対象文書の更新が不要）の判定対象そのものである。** `docs/` 直下にドキュメントを追加・削除したら必ずこの一覧も更新する（一覧と実態が食い違うとパス判定が不定になる。両者の一致は `tests/procedures/test_lightweight_path_criteria.py` が検証する）。
 
 ### 記憶層の運用
 
