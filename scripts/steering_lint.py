@@ -26,8 +26,8 @@ COMPLETED_PATTERN = re.compile(r"^\s*- \[[xX]\] ", re.MULTILINE)
 FENCE_PATTERN = re.compile(r"^[ \t]*(`{3,}|~{3,})")
 ISSUE_URL_PATTERN = re.compile(r"github\.com/[^/\s]+/[^/\s]+/issues/\d+")
 PLACEHOLDER_PATTERN = re.compile(r"\{[^{}\n]+\}")
-# 行末アンカーにより「非適用」「適用外」や後続テキスト付きは宣言と見なさない。
-LIGHTWEIGHT_PATTERN = re.compile(r"軽量パス\**\s*[:：]\s*適用\s*$", re.MULTILINE)
+# テンプレートが定める宣言行全体だけに一致させ、類似ラベルや説明文を除外する。
+LIGHTWEIGHT_PATTERN = re.compile(r"^- \*\*軽量パス\*\*: 適用[ \t]*$", re.MULTILINE)
 RETROSPECTIVE_HEADING = "## 実装後の振り返り"
 REQUIRED_FILES = ("requirements.md", "design.md", "tasklist.md")
 
@@ -122,7 +122,8 @@ def has_lightweight_declaration(steering_dir: Path) -> bool:
     requirements = steering_dir / "requirements.md"
     if not requirements.is_file():
         return False
-    return bool(LIGHTWEIGHT_PATTERN.search(requirements.read_text(encoding="utf-8")))
+    text = requirements.read_text(encoding="utf-8")
+    return bool(LIGHTWEIGHT_PATTERN.search(strip_code_fences(text)))
 
 
 def check_required_files(steering_dir: Path) -> list[Violation]:
