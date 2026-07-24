@@ -81,12 +81,15 @@ Stop確認用ディレクトリは`.steering/YYYYMMDD-zz-kiro-stop-smoke/`とし
 Stopフックとlintの実機確認だけを行い、製品ファイルは変更しない。
 ```
 
-`tasklist.md`:
+`tasklist.md`(形の正は`docs/procedures/harness-acceptance.md`の「Stop確認用sentinel tasklistの形」):
 
 ```markdown
 # タスクリスト
+- [x] Stop smoke 着手マーカー（人が事前に付ける。Stop契約の「着手済み」条件を満たすため）
 - [ ] Stop smoke sentinel（agentは完了・更新しない。最初のblock後に人が中断する）
 ```
+
+着手マーカーは人が最初から`[x]`で置きます。完了ゼロの未着手tasklistは承認ゲート/作業前とみなしてfail-openするため、未完了行だけではblockを観察できません。
 
 選択対象を確認します。
 

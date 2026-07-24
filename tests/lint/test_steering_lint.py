@@ -200,6 +200,90 @@ def test_has_completed_tasks_false_when_empty() -> None:
     assert lint_mod.has_completed_tasks("") is False
 
 
+# --- strip_code_fences(フェンス除去の前処理) ---
+
+
+def test_strip_code_fences_blanks_fenced_lines_and_keeps_line_count() -> None:
+    text = "before\n```\ninside\n```\nafter\n"
+    assert lint_mod.strip_code_fences(text) == "before\n\n\n\nafter\n"
+
+
+def test_strip_code_fences_keeps_text_without_fences() -> None:
+    text = "- [x] done\n- [ ] todo\n"
+    assert lint_mod.strip_code_fences(text) == text
+
+
+def test_strip_code_fences_handles_indented_fence() -> None:
+    text = "- タスク\n  ```\n  - [x] example\n  ```\n- [x] real\n"
+    assert "example" not in lint_mod.strip_code_fences(text)
+    assert "- [x] real" in lint_mod.strip_code_fences(text)
+
+
+# --- コードフェンス内の例示を完了タスクと数えない ---
+
+
+def test_has_completed_tasks_ignores_backtick_fence() -> None:
+    assert lint_mod.has_completed_tasks("```\n- [x] example\n```\n") is False
+
+
+def test_has_completed_tasks_ignores_tilde_fence() -> None:
+    assert lint_mod.has_completed_tasks("~~~\n- [x] example\n~~~\n") is False
+
+
+def test_has_completed_tasks_ignores_fence_with_info_string() -> None:
+    assert lint_mod.has_completed_tasks("```markdown\n- [x] example\n```\n") is False
+
+
+def test_has_completed_tasks_detects_task_after_closing_fence() -> None:
+    text = "```markdown\n- [x] example\n```\n- [x] real task\n"
+    assert lint_mod.has_completed_tasks(text) is True
+
+
+def test_has_completed_tasks_ignores_shorter_fence_inside_longer_one() -> None:
+    # 終了フェンスは開始と同じ長さ以上であることを要する(内側の``` では閉じない)
+    text = "````\n```\n- [x] example\n```\n````\n"
+    assert lint_mod.has_completed_tasks(text) is False
+
+
+def test_has_completed_tasks_ignores_different_marker_as_closer() -> None:
+    # チルダで開いたフェンスはバッククォートでは閉じない
+    text = "~~~\n```\n- [x] example\n"
+    assert lint_mod.has_completed_tasks(text) is False
+
+
+def test_has_completed_tasks_unclosed_fence_does_not_raise() -> None:
+    # 閉じられていないフェンスは以降を例示扱いにして終了する(安全側=未着手)
+    assert lint_mod.has_completed_tasks("```\n- [x] example\n") is False
+
+
+def test_c3_still_detects_incomplete_task_inside_fence(tmp_path: Path) -> None:
+    # 非対称性の固定: C3はフェンスを除外しない(未完了を隠す抜け穴を作らないため)
+    make_steering(tmp_path, "20260714-foo", tasklist="```\n- [ ] example\n```\n")
+    violations = [v for v in lint_mod.lint(tmp_path) if v.check_id == "C3"]
+    assert len(violations) == 1
+
+
+# --- 実テンプレートの回帰(作りたての標準tasklistは未着手と判定される) ---
+
+TEMPLATE_TASKLIST = Path(__file__).parents[2] / "docs" / "procedures" / "templates" / "tasklist.md"
+
+
+def test_template_tasklist_is_unstarted() -> None:
+    """テンプレートにスキップ記法の例示が戻っても未着手判定が壊れないことを固定する。
+
+    例示 `- [x] ~~タスク名~~` はコードフェンス内にあり、完了タスクとして数えてはならない。
+    数えてしまうと、計画承認待ちの未着手tasklistにStopフックが割り込む。
+    """
+    text = TEMPLATE_TASKLIST.read_text(encoding="utf-8")
+    assert lint_mod.has_completed_tasks(text) is False
+
+
+def test_template_tasklist_has_incomplete_tasks() -> None:
+    """同じテンプレートに対し、C3は従来どおり未完了タスクを検出する。"""
+    text = TEMPLATE_TASKLIST.read_text(encoding="utf-8")
+    assert len(lint_mod.find_incomplete_tasks(text)) > 0
+
+
 # --- C4: 振り返りプレースホルダ ---
 
 

@@ -56,6 +56,8 @@
 - `design.md`: 実装アプローチ
 - `tasklist.md`: 具体的なタスクリスト
 
+**通常パスは上記3ファイル、軽量パスは `design.md` を省略した2ファイル**とする。軽量パスは add-feature 手順の適用基準4項目をすべて満たす場合にのみ選択でき、`requirements.md` に `- **軽量パス**: 適用` と判定結果を記録する(設計判断が発生しないことが適用条件のため、設計の記述は requirements.md の実装対象セクションで足りる)。基準と判定手順の正は `docs/procedures/add-feature.md` ステップ4にある。
+
 命名規則: `20250115-add-user-profile` 形式
 
 **IssueとステアリングはセットでGitHub Issueを先に作成し、ステアリングの `requirements.md` に紐づける。**
@@ -109,7 +111,7 @@ steering 手順の実体は `docs/procedures/steering.md`(テンプレートは 
 特定の開発作業における「今回何をするか」を定義:
 
 - `requirements.md`: 今回の作業の要求内容
-- `design.md`: 変更内容の設計
+- `design.md`: 変更内容の設計（軽量パス適用時は省略する）
 - `tasklist.md`: タスクリスト
 
 ### 手順書(`docs/procedures/`)
