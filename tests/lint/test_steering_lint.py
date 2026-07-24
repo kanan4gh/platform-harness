@@ -134,6 +134,24 @@ def test_c1_declaration_with_trailing_text_is_not_recognized(tmp_path: Path) -> 
     assert check_ids(lint_mod.lint(tmp_path)) == {"C1"}
 
 
+def test_c1_declaration_lookalikes_still_require_design(tmp_path: Path) -> None:
+    cases = {
+        "fenced-example": "```markdown\n- **軽量パス**: 適用\n```",
+        "negated-label": "- **非軽量パス**: 適用",
+        "explanatory-text": "例として軽量パス: 適用",
+    }
+    for case_name, declaration in cases.items():
+        project_root = tmp_path / case_name
+        requirements = f"# 要求内容\n\n- 関連Issue: {ISSUE_URL}\n{declaration}\n"
+        make_steering(
+            project_root,
+            "20260725-false-positive",
+            requirements=requirements,
+            design=None,
+        )
+        assert check_ids(lint_mod.lint(project_root)) == {"C1"}, case_name
+
+
 def test_c1_missing_requirements_not_excused_by_lightweight(tmp_path: Path) -> None:
     # requirements.md 自体の欠落は宣言判定以前の問題として従来どおり報告する
     make_steering(tmp_path, "20260716-foo", requirements=None, design=None)
