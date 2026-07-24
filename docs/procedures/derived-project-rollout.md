@@ -136,14 +136,14 @@ activeな移行PRや同じ正典ファイルを変更するbranchがある場合
 2. 導入したsteering lint、有料自動化lint、アダプタ構造テストを実行する。
 3. 対象に合わせた`local_quality_gate.py`を単一入口として実行する。
 4. docs変更を独立した文脈でレビューし、実装とsteeringの準拠を検証する。
-5. アダプタ・権限・hooksを変更したハーネスだけ、G3で人がIDEまたは対話型CLI受け入れを行う。
+5. アダプタ・権限・hooksを変更したハーネスだけ、G3で人がIDEまたは対話型CLI受け入れを行う。G3の実施位置と記録・再ゲートの順序は`docs/procedures/add-feature.md`ステップ8-B(候補ゲート → 候補コミット → G3 → `acceptance-record.md`へ記録 → 最終ゲート → 記録コミット → PR)に従う。
 6. GitHub Actions自動runと有料LLM headless mode起動が0件であることを記録する。
 
 1つのハーネスが受け入れ不能でも、別ハーネスの合格で代替しない。能力差、代替した決定論的ゲート、未確認理由を記録する。
 
 ## フェーズ5: PR、G4マージ、台帳更新
 
-1. tasklistへ同期元、manifest、bootstrap executor、authority handoff、検証、実機受入を記録する。
+1. tasklistへ同期元、manifest、bootstrap executor、authority handoff、検証を記録する。実機受入(G3)の結果は`acceptance-record.md`へ記録し、記録後に最終ゲートを再実行する(`add-feature.md`ステップ8-B手順4〜5。記録をtasklistのチェックボックスにしない)。
 2. 対象側のConventional CommitとPRを作成する。
 3. G4で人がPRをマージする。
 4. 必要な対象プロジェクトreleaseを作成する。
