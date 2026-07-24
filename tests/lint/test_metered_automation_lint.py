@@ -119,6 +119,35 @@ def test_scan_honors_specific_excluded_fixture(tmp_path: Path) -> None:
     assert scan(tmp_path, data) == []
 
 
+def test_scan_skips_nested_worktree_checkouts(tmp_path: Path) -> None:
+    # 除外と過剰除外を1ケースで確認する(片方だけ通って安心しないため)。
+    # 入れ子側は実際の誘因ファイルに合わせて .py に置き、Python解析経路も通す。
+    commands = tmp_path / ".claude" / "commands"
+    commands.mkdir(parents=True)
+    (commands / "run.md").write_text("`claude -p prompt`", encoding="utf-8")
+    nested = tmp_path / ".claude" / "worktrees" / "feature+x" / "tests" / "lint"
+    nested.mkdir(parents=True)
+    (nested / "fixture.py").write_text('run(["codex", "exec", "task"])', encoding="utf-8")
+
+    data = policy_data(include_paths=[".claude"], exclude_paths=[".claude/worktrees"])
+    violations = scan(tmp_path, data)
+
+    assert [violation.path for violation in violations] == [Path(".claude/commands/run.md")]
+
+
+def test_repository_policy_scans_active_surfaces_but_not_nested_worktrees() -> None:
+    # メンバーシップではなく実際の走査結果で固定する。exclude_paths に `.claude/commands`
+    # のような指示面を足すと、このテストが落ちる(過剰除外ガードは1階層しか審査しないため、
+    # 複数階層のディレクトリ除外を機械的に捕捉できるのはこの経路だけ)。
+    root = LINT_PATH.parents[1]
+    policy = lint.load_policy(LINT_PATH.with_name("metered_automation_policy.json"))
+
+    targets = {path.relative_to(root) for path in lint.iter_target_files(root, policy)}
+
+    assert Path(".claude/commands/add-feature.md") in targets
+    assert not [path for path in targets if path.parts[:2] == (".claude", "worktrees")]
+
+
 def test_load_policy_rejects_overly_broad_exclude(tmp_path: Path) -> None:
     path = write_policy(tmp_path, policy_data(exclude_paths=["docs"]))
     with pytest.raises(lint.PolicyError, match="overly broad"):
