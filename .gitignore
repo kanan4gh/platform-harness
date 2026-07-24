@@ -14,3 +14,8 @@ dist/
 # フックの揮発状態(セッションローカル)
 .claude/hooks/state/
 .codex/hooks/state/
+
+# 入れ子の作業ツリー(EnterWorktree が作るリポジトリ内checkout)
+# 無視しないと、.gitignore を尊重するツール(ruff等)が作業ツリー内の
+# checkout全体を走査し、無関係な作業ツリーの状態でゲート結果が変わる
+.claude/worktrees/
