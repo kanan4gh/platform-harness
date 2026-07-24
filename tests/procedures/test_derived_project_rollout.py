@@ -145,7 +145,7 @@ def test_catalog_does_not_duplicate_operated_outfit_remote() -> None:
     assert "運用コピー" in text
 
 
-def test_catalog_records_completed_outfit_v1_3_0_rollout() -> None:
+def test_catalog_records_completed_outfit_v1_4_0_rollout() -> None:
     rows = catalog_rows()
     outfit_rows = [row for row in rows if row["Remote"] == "`kanan4gh/outfit-studio`"]
     assert len(outfit_rows) == 1
@@ -153,8 +153,9 @@ def test_catalog_records_completed_outfit_v1_3_0_rollout() -> None:
     assert row["Harness generation"] == "`current-neutral`"
     assert row["Strategy"] == "`direct-sync`"
     assert row["State"] == "`synced`"
-    assert row["Last source"] == "`v1.3.0 / bd2cd8c`"
+    assert row["Last source"] == "`v1.4.0 / 2bd61f1`"
     assert "PR #26" in row["Lineage evidence"]
+    assert "PR #34" in row["Decision / next action"]
     assert "PR #22は不要としてclose" in row["Decision / next action"]
     assert "PR #26" in row["Decision / next action"]
     assert "clean clone / worktree" in row["Local caution"]
