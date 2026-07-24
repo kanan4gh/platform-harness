@@ -20,6 +20,8 @@ from typing import NamedTuple
 
 STEERING_DIR_PATTERN = re.compile(r"^\d{8}-")
 INCOMPLETE_PATTERN = re.compile(r"^\s*- \[ \] (.+)$", re.MULTILINE)
+# 完了タスク(スキップ表記 `- [x] ~~...~~` を含む)。Stopフックの未着手判定に用いる。
+COMPLETED_PATTERN = re.compile(r"^\s*- \[[xX]\] ", re.MULTILINE)
 ISSUE_URL_PATTERN = re.compile(r"github\.com/[^/\s]+/[^/\s]+/issues/\d+")
 PLACEHOLDER_PATTERN = re.compile(r"\{[^{}\n]+\}")
 # 行末アンカーにより「非適用」「適用外」や後続テキスト付きは宣言と見なさない。
@@ -57,6 +59,15 @@ def find_latest_tasklist(project_root: Path) -> Path | None:
 def find_incomplete_tasks(text: str) -> list[str]:
     """未完了タスク(`- [ ]`)の内容を出現順に返す。"""
     return INCOMPLETE_PATTERN.findall(text)
+
+
+def has_completed_tasks(text: str) -> bool:
+    """完了タスク(`- [x]`/`- [X]`)が1つ以上あるかを返す。
+
+    Stopフックの「未着手フェイルオープン」判定に用いる補助関数。lint本体(C3)は
+    未完了の有無だけを見るため本関数を使わない(CIゲートは未着手でも未完了を検出する)。
+    """
+    return bool(COMPLETED_PATTERN.search(text))
 
 
 def has_lightweight_declaration(steering_dir: Path) -> bool:

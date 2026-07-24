@@ -40,33 +40,42 @@ def test_check_no_steering_returns_none(tmp_path: Path) -> None:
     assert hook.check({}, tmp_path) is None
 
 
+def test_check_unstarted_tasklist_returns_none(tmp_path: Path) -> None:
+    # 未着手(完了タスクゼロ)は計画承認ゲート/作業前とみなしfail-openし、状態ファイルも作らない
+    make_steering(tmp_path, "20260715-foo", "- [ ] a\n- [ ] b\n")
+    assert hook.check({}, tmp_path) is None
+    assert not (tmp_path / STATE_PATH).exists()
+
+
 def test_consecutive_block_guard_fails_open(tmp_path: Path) -> None:
-    make_steering(tmp_path, "20260715-foo", "- [ ] stuck\n")
+    make_steering(tmp_path, "20260715-foo", "- [x] done\n- [ ] stuck\n")
     for _ in range(hook.MAX_CONSECUTIVE_BLOCKS):
         assert hook.check({}, tmp_path) is not None
     assert hook.check({}, tmp_path) is None
 
 
 def test_guard_resets_when_tasklist_changes(tmp_path: Path) -> None:
-    directory = make_steering(tmp_path, "20260715-foo", "- [ ] first\n")
+    directory = make_steering(tmp_path, "20260715-foo", "- [x] done\n- [ ] first\n")
     for _ in range(hook.MAX_CONSECUTIVE_BLOCKS):
         assert hook.check({}, tmp_path) is not None
     assert hook.check({}, tmp_path) is None
-    (directory / "tasklist.md").write_text("- [ ] first\n- [ ] second\n", encoding="utf-8")
+    (directory / "tasklist.md").write_text(
+        "- [x] done\n- [ ] first\n- [ ] second\n", encoding="utf-8"
+    )
     assert hook.check({}, tmp_path) is not None
 
 
 def test_guard_state_resets_on_completion(tmp_path: Path) -> None:
-    directory = make_steering(tmp_path, "20260715-foo", "- [ ] wip\n")
+    directory = make_steering(tmp_path, "20260715-foo", "- [x] done\n- [ ] wip\n")
     assert hook.check({}, tmp_path) is not None
-    (directory / "tasklist.md").write_text("- [x] wip\n", encoding="utf-8")
+    (directory / "tasklist.md").write_text("- [x] done\n- [x] wip\n", encoding="utf-8")
     assert hook.check({}, tmp_path) is None
     state = json.loads((tmp_path / STATE_PATH).read_text(encoding="utf-8"))
     assert state["consecutive_blocks"] == 0
 
 
 def test_missing_state_starts_from_first_block(tmp_path: Path) -> None:
-    make_steering(tmp_path, "20260715-foo", "- [ ] wip\n")
+    make_steering(tmp_path, "20260715-foo", "- [x] done\n- [ ] wip\n")
     assert not (tmp_path / STATE_PATH).exists()
     assert hook.check({}, tmp_path) is not None
     state = json.loads((tmp_path / STATE_PATH).read_text(encoding="utf-8"))
@@ -74,7 +83,7 @@ def test_missing_state_starts_from_first_block(tmp_path: Path) -> None:
 
 
 def test_corrupt_state_fails_open(tmp_path: Path) -> None:
-    make_steering(tmp_path, "20260715-foo", "- [ ] wip\n")
+    make_steering(tmp_path, "20260715-foo", "- [x] done\n- [ ] wip\n")
     state_path = tmp_path / STATE_PATH
     state_path.parent.mkdir(parents=True)
     state_path.write_text("not json", encoding="utf-8")
@@ -92,14 +101,14 @@ def run_hook(stdin_text: str, cwd: Path) -> subprocess.CompletedProcess[str]:
 
 
 def test_main_resolves_root_from_cwd_field(tmp_path: Path) -> None:
-    make_steering(tmp_path, "20260715-foo", "- [ ] not yet\n")
+    make_steering(tmp_path, "20260715-foo", "- [x] done\n- [ ] not yet\n")
     process = run_hook(json.dumps({"cwd": str(tmp_path)}), Path.cwd())
     assert process.returncode == 0
     assert json.loads(process.stdout)["decision"] == "block"
 
 
 def test_main_uses_process_cwd_when_field_is_missing(tmp_path: Path) -> None:
-    make_steering(tmp_path, "20260715-foo", "- [ ] not yet\n")
+    make_steering(tmp_path, "20260715-foo", "- [x] done\n- [ ] not yet\n")
     process = run_hook("{}", tmp_path)
     assert process.returncode == 0
     assert json.loads(process.stdout)["decision"] == "block"

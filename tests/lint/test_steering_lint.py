@@ -177,6 +177,29 @@ def test_c3_checks_all_dirs_not_only_latest(tmp_path: Path) -> None:
     assert violations[0].directory == "20260101-old"
 
 
+# --- has_completed_tasks(Stopフックの未着手判定ヘルパ) ---
+
+
+def test_has_completed_tasks_detects_lowercase() -> None:
+    assert lint_mod.has_completed_tasks("- [x] done\n- [ ] not yet\n") is True
+
+
+def test_has_completed_tasks_detects_uppercase() -> None:
+    assert lint_mod.has_completed_tasks("- [X] done\n") is True
+
+
+def test_has_completed_tasks_detects_skipped_notation() -> None:
+    assert lint_mod.has_completed_tasks("- [x] ~~タスク~~（理由: 方針変更）\n") is True
+
+
+def test_has_completed_tasks_false_when_all_incomplete() -> None:
+    assert lint_mod.has_completed_tasks("- [ ] a\n- [ ] b\n") is False
+
+
+def test_has_completed_tasks_false_when_empty() -> None:
+    assert lint_mod.has_completed_tasks("") is False
+
+
 # --- C4: 振り返りプレースホルダ ---
 
 

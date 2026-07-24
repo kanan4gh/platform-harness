@@ -56,7 +56,7 @@ kiro-cli --agent sdd
 
 起動後に`/context`を実行し、`Active agent context: sdd`、`AGENTS.md`、5つのworkspace skillが各1回だけ表示されることを確認します。
 
-`sdd.json`はread / write / shell / subagentを利用可能にしますが、事前許可するのはreadだけです。write / shellはKiroの確認対象のままです。Stopフックは最新tasklist.mdに未完了タスクがあればblock decisionを返し、同一内容を3回ブロックした後は無限ループ防止のためfail-openします。
+`sdd.json`はread / write / shell / subagentを利用可能にしますが、事前許可するのはreadだけです。write / shellはKiroの確認対象のままです。Stopフックは最新tasklist.mdが着手済み(完了タスク1件以上)で未完了タスクを残していればblock decisionを返し(完了ゼロの未着手tasklistは承認ゲート/作業前とみなしfail-open)、同一内容を3回ブロックした後は無限ループ防止のためfail-openします。
 
 ## 実機受入チェックリスト
 
