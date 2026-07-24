@@ -3,6 +3,7 @@
 `.steering/[YYYYMMDD]-*/` の全ディレクトリに対して以下をチェックする:
 
 - C1: requirements.md / design.md / tasklist.md の3ファイルが存在する
+      (requirements.md に軽量パス宣言(`軽量パス: 適用`)がある場合は design.md を省略できる)
 - C2: requirements.md に GitHub Issue URL が記載されている
 - C3: tasklist.md に未完了タスク(`- [ ]`)が残っていない
 - C4: 完了済み(未完了タスクなし)のtasklist.mdの「実装後の振り返り」セクションに
@@ -21,6 +22,8 @@ STEERING_DIR_PATTERN = re.compile(r"^\d{8}-")
 INCOMPLETE_PATTERN = re.compile(r"^\s*- \[ \] (.+)$", re.MULTILINE)
 ISSUE_URL_PATTERN = re.compile(r"github\.com/[^/\s]+/[^/\s]+/issues/\d+")
 PLACEHOLDER_PATTERN = re.compile(r"\{[^{}\n]+\}")
+# 行末アンカーにより「非適用」「適用外」や後続テキスト付きは宣言と見なさない。
+LIGHTWEIGHT_PATTERN = re.compile(r"軽量パス\**\s*[:：]\s*適用\s*$", re.MULTILINE)
 RETROSPECTIVE_HEADING = "## 実装後の振り返り"
 REQUIRED_FILES = ("requirements.md", "design.md", "tasklist.md")
 
@@ -56,13 +59,20 @@ def find_incomplete_tasks(text: str) -> list[str]:
     return INCOMPLETE_PATTERN.findall(text)
 
 
+def has_lightweight_declaration(steering_dir: Path) -> bool:
+    """requirements.md に軽量パス宣言(`軽量パス: 適用`)があるかを返す。"""
+    requirements = steering_dir / "requirements.md"
+    if not requirements.is_file():
+        return False
+    return bool(LIGHTWEIGHT_PATTERN.search(requirements.read_text(encoding="utf-8")))
+
+
 def check_required_files(steering_dir: Path) -> list[Violation]:
-    """C1: 3ファイルの存在チェック。"""
-    return [
-        Violation(steering_dir.name, "C1", f"{name} がありません")
-        for name in REQUIRED_FILES
-        if not (steering_dir / name).is_file()
-    ]
+    """C1: 3ファイルの存在チェック。軽量パス宣言がある場合は design.md を省略できる。"""
+    missing = [name for name in REQUIRED_FILES if not (steering_dir / name).is_file()]
+    if "design.md" in missing and has_lightweight_declaration(steering_dir):
+        missing.remove("design.md")
+    return [Violation(steering_dir.name, "C1", f"{name} がありません") for name in missing]
 
 
 def check_issue_url(steering_dir: Path) -> list[Violation]:

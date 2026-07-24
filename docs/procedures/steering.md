@@ -41,6 +41,8 @@
    - `docs/procedures/templates/requirements.md` → `requirements.md`(関連Issue URLと**使用ハーネス**を必ず記載。蒸留時にハーネス差を分析するため)
    - `docs/procedures/templates/design.md` → `design.md`
    - `docs/procedures/templates/tasklist.md` → `tasklist.md`
+
+   **軽量パス適用時**(add-feature 手順の適用基準4項目をすべて満たし、requirements.md に「**軽量パス**: 適用」と判定結果を記録した場合)は、design.md を省略して requirements.md + tasklist.md の2ファイル構成とする(steering lint の C1 は宣言を検出して design.md 省略を許可する)。設計判断が発生しないことが適用条件のため、設計の記述は requirements.md の実装対象セクションで足りる
 4. tasklist.mdはrequirements.md / design.mdに基づいて詳細化する:
    - 実装可能なタスクのみをリストアップする(「将来やるかも」「検討中」は含めない)
    - フェーズ分け・実装順序・サブタスクを明確にする

@@ -90,6 +90,59 @@ def test_c1_missing_files_detected(tmp_path: Path) -> None:
     assert "tasklist.md" in violations[1].message
 
 
+# --- C1: 軽量パス宣言による design.md 省略 ---
+
+LIGHTWEIGHT_REQUIREMENTS = f"""# 要求内容
+
+- **関連Issue**: {ISSUE_URL}
+- **軽量パス**: 適用
+"""
+
+
+def test_c1_lightweight_declaration_allows_missing_design(tmp_path: Path) -> None:
+    make_steering(tmp_path, "20260716-foo", requirements=LIGHTWEIGHT_REQUIREMENTS, design=None)
+    assert lint_mod.lint(tmp_path) == []
+
+
+def test_c1_lightweight_declaration_with_design_present_is_allowed(tmp_path: Path) -> None:
+    make_steering(tmp_path, "20260716-foo", requirements=LIGHTWEIGHT_REQUIREMENTS)
+    assert lint_mod.lint(tmp_path) == []
+
+
+def test_c1_no_declaration_still_requires_design(tmp_path: Path) -> None:
+    make_steering(tmp_path, "20260716-foo", design=None)
+    assert check_ids(lint_mod.lint(tmp_path)) == {"C1"}
+
+
+def test_c1_non_applied_declaration_still_requires_design(tmp_path: Path) -> None:
+    # 「非適用」「適用外」を宣言と誤判定しない(行末アンカーで担保)
+    for i, value in enumerate(("非適用", "適用外")):
+        d = tmp_path / f"case{i}"
+        requirements = f"# 要求内容\n\n- 関連Issue: {ISSUE_URL}\n- **軽量パス**: {value}\n"
+        make_steering(d, "20260716-foo", requirements=requirements, design=None)
+        assert check_ids(lint_mod.lint(d)) == {"C1"}
+
+
+def test_c1_declaration_with_trailing_text_is_not_recognized(tmp_path: Path) -> None:
+    # 宣言行は「適用」で行を完結させる仕様(テンプレートに明記)。
+    # 後続テキストがあると宣言と見なされないことを回帰テストで固定する。
+    requirements = (
+        f"# 要求内容\n\n- 関連Issue: {ISSUE_URL}\n"
+        "- **軽量パス**: 適用。基準4項目をすべて満たすため\n"
+    )
+    make_steering(tmp_path, "20260716-foo", requirements=requirements, design=None)
+    assert check_ids(lint_mod.lint(tmp_path)) == {"C1"}
+
+
+def test_c1_missing_requirements_not_excused_by_lightweight(tmp_path: Path) -> None:
+    # requirements.md 自体の欠落は宣言判定以前の問題として従来どおり報告する
+    make_steering(tmp_path, "20260716-foo", requirements=None, design=None)
+    violations = lint_mod.lint(tmp_path)
+    assert [v.check_id for v in violations] == ["C1", "C1"]
+    assert "requirements.md" in violations[0].message
+    assert "design.md" in violations[1].message
+
+
 # --- C2: Issue URL ---
 
 
