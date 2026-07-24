@@ -156,7 +156,7 @@
 ### `implementation-validator`
 
 - **モデル**: Claude Sonnet
-- **用途**: `/add-feature` の4段検証・段4で呼び出される。ステアリングファイル（requirements.md / design.md / tasklist.md）と実装の整合性検証に特化
+- **用途**: `/add-feature` の4段検証・段4で呼び出される。ステアリングファイル（通常パス: requirements.md / design.md / tasklist.md、軽量パス: design.md を省略した2ファイル）と実装の整合性検証に特化
 - **観点の正**: `docs/procedures/validate-implementation.md`(エージェント定義はそれを参照する役割宣言のみ)
 
 ---
@@ -173,7 +173,7 @@
 
 | モード | 呼び出しタイミング | 主な動作 |
 |--------|-----------------|---------|
-| 計画モード | `/add-feature` 開始時 | `.steering/` にrequirements.md・design.md・tasklist.mdを生成 |
+| 計画モード | `/add-feature` 開始時 | `.steering/` にステアリングファイルを生成（通常パス: requirements.md・design.md・tasklist.md の3ファイル、軽量パス: design.mdを省略した2ファイル） |
 | 実装モード | タスク実行中 | tasklist.mdをリアルタイムで更新（`[ ]`→`[x]`）し、進捗を追跡 |
 | 振り返りモード | 全タスク完了後 | tasklist.mdの振り返りセクションに完了日・学びを記録 |
 

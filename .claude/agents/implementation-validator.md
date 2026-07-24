@@ -1,6 +1,6 @@
 ---
 name: implementation-validator
-description: 実装とステアリングファイル(requirements.md / design.md / tasklist.md)の整合性を検証するスペック準拠検証エージェント
+description: 実装とステアリングファイル(通常パス: requirements.md / design.md / tasklist.md、軽量パス: design.mdを省略した2ファイル)の整合性を検証するスペック準拠検証エージェント
 model: sonnet
 ---
 

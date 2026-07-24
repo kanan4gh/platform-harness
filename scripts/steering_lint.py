@@ -22,6 +22,8 @@ STEERING_DIR_PATTERN = re.compile(r"^\d{8}-")
 INCOMPLETE_PATTERN = re.compile(r"^\s*- \[ \] (.+)$", re.MULTILINE)
 # 完了タスク(スキップ表記 `- [x] ~~...~~` を含む)。Stopフックの未着手判定に用いる。
 COMPLETED_PATTERN = re.compile(r"^\s*- \[[xX]\] ", re.MULTILINE)
+# Markdownフェンス付きコードブロックの開始・終了行(バッククォート/チルダ、3文字以上)。
+FENCE_PATTERN = re.compile(r"^[ \t]*(`{3,}|~{3,})")
 ISSUE_URL_PATTERN = re.compile(r"github\.com/[^/\s]+/[^/\s]+/issues/\d+")
 PLACEHOLDER_PATTERN = re.compile(r"\{[^{}\n]+\}")
 # 行末アンカーにより「非適用」「適用外」や後続テキスト付きは宣言と見なさない。
@@ -56,8 +58,49 @@ def find_latest_tasklist(project_root: Path) -> Path | None:
     return tasklist if tasklist.is_file() else None
 
 
+def strip_code_fences(text: str) -> str:
+    """Markdownフェンス付きコードブロック内の行を空行に置換したテキストを返す。
+
+    テンプレート等が記法の**例示**をコードフェンス内に持つため、例示のチェックボックスを
+    実タスクと取り違えないための前処理。行番号を保つため除去ではなく空行化する。
+
+    終了フェンスは開始と同じ文字種・開始以上の長さで、マーカー以降に非空白文字がない行。
+    閉じられていないフェンスは以降すべてを例示扱いにして終了する(例外を投げない)。
+    """
+    lines = text.split("\n")
+    stripped: list[str] = []
+    open_marker: str | None = None
+    for line in lines:
+        match = FENCE_PATTERN.match(line)
+        if open_marker is None:
+            if match is None:
+                stripped.append(line)
+            else:
+                # info string(```markdown 等)を許容して開始フェンスとみなす
+                open_marker = match.group(1)
+                stripped.append("")
+            continue
+        if match is not None and _closes_fence(match, line, open_marker):
+            open_marker = None
+        stripped.append("")
+    return "\n".join(stripped)
+
+
+def _closes_fence(match: re.Match[str], line: str, open_marker: str) -> bool:
+    """フェンス記号にマッチした行が、開いているフェンスの終了行かを返す。"""
+    marker = match.group(1)
+    if marker[0] != open_marker[0] or len(marker) < len(open_marker):
+        return False
+    # 終了フェンスはinfo stringを持てない
+    return not line[match.end() :].strip()
+
+
 def find_incomplete_tasks(text: str) -> list[str]:
-    """未完了タスク(`- [ ]`)の内容を出現順に返す。"""
+    """未完了タスク(`- [ ]`)の内容を出現順に返す。
+
+    **コードフェンスを除外しない**のは意図的である。除外機構は未完了タスクを隠す抜け穴に
+    なり得るのに対し、過検出はPR前に人が気づける安全側の失敗であるため。
+    """
     return INCOMPLETE_PATTERN.findall(text)
 
 
@@ -66,8 +109,12 @@ def has_completed_tasks(text: str) -> bool:
 
     Stopフックの「未着手フェイルオープン」判定に用いる補助関数。lint本体(C3)は
     未完了の有無だけを見るため本関数を使わない(CIゲートは未着手でも未完了を検出する)。
+
+    こちらは `find_incomplete_tasks` と異なりコードフェンスを除外する。例示を完了タスクと
+    誤認すると、作りたての未着手tasklistが「着手済み」と判定され、計画承認待ちの停止に
+    Stopフックが割り込んでしまうため(実害のある誤判定)。
     """
-    return bool(COMPLETED_PATTERN.search(text))
+    return bool(COMPLETED_PATTERN.search(strip_code_fences(text)))
 
 
 def has_lightweight_declaration(steering_dir: Path) -> bool:

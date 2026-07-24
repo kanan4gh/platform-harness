@@ -38,6 +38,20 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 
 受け入れ用steeringの作成をハーネスへ依頼しない。対象製品全体へ計画が拡大する可能性があるため、fixtureは人が最小形を固定する。
 
+### Stop確認用sentinel tasklistの形
+
+Stopフックは**着手済み(完了`[x]`が1件以上)かつ未完了(`[ ]`)が残っている**tasklistでのみblockする。完了ゼロの未着手tasklistは計画承認ゲート/作業前とみなしてfail-openするため、未完了だけのfixtureではblockを観察できない。sentinelは次の2行を最小形とする。
+
+```markdown
+# タスクリスト
+- [x] Stop smoke 着手マーカー（人が事前に付ける。Stop契約の「着手済み」条件を満たすため）
+- [ ] Stop smoke sentinel（agentは完了・更新しない。最初のblock後に人が中断する）
+```
+
+着手マーカーは人が最初から `[x]` で置く。agentに1件目を完了させて着手済み状態を作らせない(製品ファイルへ変更が波及しうるため)。
+
+未着手fail-openそのものを観察したい場合は、着手マーカー行を外した未完了1行だけのfixtureを別ケースとして用意し、**blockが起きないこと**を期待結果とする。
+
 ## Claude Code
 
 1. 複製環境をClaude Code IDEまたは対話型CLIで開く
@@ -45,7 +59,7 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 3. 現行版では`/agents`一覧wizardを前提にせず、`@`候補で必要なsubagentsが表示されるか、名前を明示した対話型依頼で実起動できることを確認する
 4. 指定した安全なファイルを読ませ、内容に基づく確認文字列を回答させる
 5. 読み取り、書き込み、shellを別々に依頼して承認境界を観察する
-6. 未完了sentinel tasklistに対するStopフックのblockまたはfeedbackを確認する
+6. 着手済みかつ未完了のsentinel tasklistに対するStopフックのblockまたはfeedbackを確認する
 7. 最初のblockまたは自動継続を観察した直後に`Ctrl+C`で中断し、agentにsentinelを完了・更新させない
 8. 実結果と証跡を記録する
 
@@ -56,7 +70,7 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 3. `.codex/hooks.json`のtrust確認が必要なら対話画面で承認する
 4. 指定した安全なファイルの実読込を確認する
 5. 読み取り、書き込み、shellを別々に依頼してsandbox / approvalを観察する
-6. 未完了sentinel tasklistに対するStopフックのblockまたはfeedbackを確認する
+6. 着手済みかつ未完了のsentinel tasklistに対するStopフックのblockまたはfeedbackを確認する
 7. feedback表示または最初の自動継続を観察した直後に`Ctrl+C`で中断し、agentにsentinelを完了・更新させない
 8. 実結果と証跡を記録する
 
@@ -67,7 +81,7 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 3. `/steering`を選択し、SKILL.mdの実読込を確認する
 4. 指定ファイルの実読込とread / write / shellの承認UIを個別に確認する
 5. IDEのStop triggerはblock不可であることを記録する
-6. steering lintとローカル品質ゲートが未完了tasklistを検出する代替経路を確認する
+6. steering lintとローカル品質ゲートが未完了tasklistを検出する代替経路を確認する(lintのC3は着手有無によらず未完了を検出する)
 7. 実結果と証跡を記録する
 
 ## Kiro CLI
@@ -76,7 +90,7 @@ Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金
 2. `/context`で`AGENTS.md`と5 skillsが各1回だけ表示されることを確認する
 3. 指定ファイルの実読込を確認する
 4. read事前許可とwrite / shellの承認UIを個別に確認する
-5. 人が固定した未完了sentinel tasklistに対してStopフックがstdout block decisionを返すことを確認する。reasonがUIに出ずモデルの自動継続だけが見える場合は、状態カウンタの増加を補助証跡にする
+5. 人が固定した着手済みかつ未完了のsentinel tasklistに対してStopフックがstdout block decisionを返すことを確認する。reasonがUIに出ずモデルの自動継続だけが見える場合は、状態カウンタの増加を補助証跡にする
 6. 最初の自動継続を確認した時点で、write要求を拒否して`Ctrl+C`で中断する。連続ブロックガードを実機で最後まで消費させない
 7. 入力異常・状態破損のfail-openはpytest結果と照合する
 8. 実結果と証跡を記録する
