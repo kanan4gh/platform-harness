@@ -20,7 +20,11 @@ from typing import Any
 # 判定ロジックの解決はフック自身の位置基準(リポジトリ直下/scripts)。
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 try:
-    from steering_lint import find_incomplete_tasks, find_latest_tasklist  # noqa: E402
+    from steering_lint import (  # noqa: E402
+        find_incomplete_tasks,
+        find_latest_tasklist,
+        has_completed_tasks,
+    )
 except ImportError:
     # fail-open: scripts/steering_lint.py 不在の環境ではフックを無効化する
     # (規律の最終ゲートはCIのlintが担う)
@@ -65,6 +69,11 @@ def check(event: dict[str, Any], project_root: Path) -> dict[str, Any] | None:
         # ブロック履歴がある場合のみリセットする(クリーンな環境に状態ファイルを作らない)
         if state_path.is_file():
             save_state(state_path, "", 0)
+        return None
+
+    # 未着手(完了タスクゼロ)のtasklistは計画承認ゲート/作業前とみなしfail-openする。
+    # 状態ファイルより前に判定し、未着手時に状態ファイルを作らない。
+    if not has_completed_tasks(content):
         return None
 
     # 連続ブロックガード: 同一内容へのブロックが続く場合はfail-open(無限ループ防止)

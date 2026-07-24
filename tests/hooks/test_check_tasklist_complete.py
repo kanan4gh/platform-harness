@@ -58,8 +58,14 @@ def test_check_missing_tasklist_returns_none(tmp_path: Path) -> None:
 
 
 def test_check_stop_hook_active_returns_none(tmp_path: Path) -> None:
-    make_steering(tmp_path, "20260709-foo", "- [ ] not yet\n")
+    make_steering(tmp_path, "20260709-foo", "- [x] done\n- [ ] not yet\n")
     assert hook.check({"stop_hook_active": True}, tmp_path) is None
+
+
+def test_check_unstarted_tasklist_returns_none(tmp_path: Path) -> None:
+    # 未着手(完了タスクゼロ)は計画承認ゲート/作業前とみなしfail-openする
+    make_steering(tmp_path, "20260709-foo", "- [ ] a\n- [ ] b\n")
+    assert hook.check({}, tmp_path) is None
 
 
 def test_check_only_latest_dir_is_inspected(tmp_path: Path) -> None:
@@ -70,7 +76,7 @@ def test_check_only_latest_dir_is_inspected(tmp_path: Path) -> None:
 
 def test_check_latest_dir_incomplete_blocks(tmp_path: Path) -> None:
     make_steering(tmp_path, "20260101-old", "- [x] done\n")
-    make_steering(tmp_path, "20260709-new", "- [ ] new incomplete\n")
+    make_steering(tmp_path, "20260709-new", "- [x] done\n- [ ] new incomplete\n")
     result = hook.check({}, tmp_path)
     assert result is not None
     assert "new incomplete" in result["reason"]
@@ -78,7 +84,7 @@ def test_check_latest_dir_incomplete_blocks(tmp_path: Path) -> None:
 
 def test_check_reason_lists_at_most_five_tasks(tmp_path: Path) -> None:
     tasks = "\n".join(f"- [ ] task{i}" for i in range(7))
-    make_steering(tmp_path, "20260709-foo", tasks + "\n")
+    make_steering(tmp_path, "20260709-foo", "- [x] done\n" + tasks + "\n")
     result = hook.check({}, tmp_path)
     assert result is not None
     assert "task4" in result["reason"]
@@ -95,7 +101,7 @@ def test_check_ignores_non_dated_dirs(tmp_path: Path) -> None:
 def test_check_non_dated_dir_does_not_shadow_dated_dir(tmp_path: Path) -> None:
     # 名前降順で example が 20260709-* より後でも、日付ディレクトリが優先される
     make_steering(tmp_path, "example", "- [x] done\n")
-    make_steering(tmp_path, "20260709-foo", "- [ ] real incomplete\n")
+    make_steering(tmp_path, "20260709-foo", "- [x] done\n- [ ] real incomplete\n")
     result = hook.check({}, tmp_path)
     assert result is not None
     assert "real incomplete" in result["reason"]
@@ -119,7 +125,7 @@ def run_hook(stdin_text: str, cwd: Path) -> subprocess.CompletedProcess[str]:
 
 
 def test_main_blocks_via_stdout(tmp_path: Path) -> None:
-    make_steering(tmp_path, "20260709-foo", "- [ ] not yet\n")
+    make_steering(tmp_path, "20260709-foo", "- [x] done\n- [ ] not yet\n")
     proc = run_hook("{}", tmp_path)
     assert proc.returncode == 0
     out = json.loads(proc.stdout)

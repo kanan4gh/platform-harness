@@ -44,7 +44,7 @@
 |------|----|------|
 | `permissions.allow` | スキル8つ | ドキュメント作成6+steering+distillは確認なしに実行される |
 | `permissions.allow` | `uv run pytest*` 等の検証系、`git status/diff/log` の読み取り系 | 副作用のないコマンドのみ自動実行 |
-| `hooks.Stop` | check_tasklist_complete.py | 最新ステアリングのtasklist.mdに未完了タスク(`[ ]`)が残っているとセッション終了をブロック |
+| `hooks.Stop` | check_tasklist_complete.py | 最新ステアリングのtasklist.mdが着手済み(完了`[x]`が1件以上)で未完了(`[ ]`)を残しているとセッション終了をブロック(完了ゼロの未着手tasklistは承認ゲート/作業前とみなしfail-open) |
 | `hooks.PostToolUse` | remind_tasklist_update.py | Edit/Writeが5回続いてもtasklist.mdが更新されない場合にリマインドを注入(非強制) |
 
 ### フック（hooks/）

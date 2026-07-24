@@ -15,7 +15,11 @@ from typing import Any
 # テスト環境でも動作させるため。
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 try:
-    from steering_lint import find_incomplete_tasks, find_latest_tasklist  # noqa: E402
+    from steering_lint import (  # noqa: E402
+        find_incomplete_tasks,
+        find_latest_tasklist,
+        has_completed_tasks,
+    )
 except ImportError:
     # fail-open: scripts/steering_lint.py 不在の環境ではフックを無効化する
     # (規律の最終ゲートはCIのlintが担う)
@@ -34,8 +38,15 @@ def check(event: dict[str, Any], project_root: Path) -> dict[str, Any] | None:
     if tasklist is None:
         return None
 
-    incomplete = find_incomplete_tasks(tasklist.read_text(encoding="utf-8"))
+    content = tasklist.read_text(encoding="utf-8")
+    incomplete = find_incomplete_tasks(content)
     if not incomplete:
+        return None
+
+    # 未着手(完了タスクゼロ)のtasklistは計画承認ゲート/作業前とみなしfail-openする。
+    # hookは着手済み作業の放置を防ぐためのもので、未着手の計画を強制実行させない。
+    # PR前の未完了検出はCIのsteering lint(C3)が担う。
+    if not has_completed_tasks(content):
         return None
 
     listed = "\n".join(f"- [ ] {task}" for task in incomplete[:MAX_LISTED_TASKS])

@@ -12,7 +12,11 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 try:
-    from steering_lint import find_incomplete_tasks, find_latest_tasklist  # noqa: E402
+    from steering_lint import (  # noqa: E402
+        find_incomplete_tasks,
+        find_latest_tasklist,
+        has_completed_tasks,
+    )
 except ImportError:
     sys.exit(0)
 
@@ -56,6 +60,11 @@ def check(event: dict[str, Any], project_root: Path) -> dict[str, Any] | None:
     if not incomplete:
         if state_path.is_file():
             save_state(state_path, "", 0)
+        return None
+
+    # 未着手(完了タスクゼロ)のtasklistは計画承認ゲート/作業前とみなしfail-openする。
+    # 状態ファイルより前に判定し、未着手時に状態ファイルを作らない。
+    if not has_completed_tasks(content):
         return None
 
     content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
