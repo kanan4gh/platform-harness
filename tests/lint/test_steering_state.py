@@ -251,6 +251,47 @@ def test_resolve_tasklist_rejects_tasklist_outside_project_without_modifying_it(
     assert target.read_text(encoding="utf-8") == original
 
 
+def test_cli_rejects_latest_external_symlink_without_modifying_target(
+    tmp_path: Path,
+) -> None:
+    project = tmp_path / "project"
+    make_project(project, "20260728-inside")
+    outside = make_project(tmp_path / "outside")
+    target = outside / "tasklist.md"
+    original = target.read_text(encoding="utf-8")
+    (project / ".steering" / "99999999-external").symlink_to(
+        outside,
+        target_is_directory=True,
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_PATH),
+            "--project-root",
+            str(project),
+            "pause",
+            "--harness",
+            "Codex",
+            "--completed-scope",
+            "境界検査前",
+            "--uncommitted-changes",
+            "なし",
+            "--resume-at",
+            "境界検査",
+            "--reason",
+            "回帰テスト",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 1
+    assert "対象は.steering直下の日付付きtasklistに限ります" in result.stderr
+    assert target.read_text(encoding="utf-8") == original
+
+
 def test_cli_error_does_not_modify_tasklist(tmp_path: Path) -> None:
     steering = make_project(tmp_path)
     target = steering / "tasklist.md"
