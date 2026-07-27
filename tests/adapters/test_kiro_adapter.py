@@ -70,9 +70,8 @@ def test_cli_sdd_agent_inherits_core_resources_and_configures_controls() -> None
     assert "resources" not in config
     assert config["tools"] == ["read", "write", "shell", "subagent"]
     assert config["allowedTools"] == ["read"]
-    stop_hook = config["hooks"]["stop"][0]
-    assert stop_hook["command"] == "python3 .kiro/hooks/check_tasklist_complete.py"
-    assert stop_hook["timeout_ms"] == 30000
+    assert "hooks" not in config
+    assert not (KIRO / "hooks" / "check_tasklist_complete.py").exists()
 
 
 def test_readme_documents_ide_cli_trust_permissions_and_differences() -> None:
@@ -81,25 +80,27 @@ def test_readme_documents_ide_cli_trust_permissions_and_differences() -> None:
         "## Kiro IDE",
         "## Kiro CLI",
         "Kiro CLI 2.7.0以降",
-        "chat.disableInheritingDefaultResources false",
+        "chat.disableInheritingDefaultResources=false",
         "kiro-cli agent validate --path .kiro/agents/sdd.json",
         "kiro-cli --agent sdd",
-        "## 実機受入チェックリスト",
-        "YYYYMMDD-zz-kiro-stop-smoke",
-        "5つのworkspace skillが各1回だけ",
-        "未観察項目は合格に含めず",
-        "Ctrl+C",
+        "## 実機受け入れ",
+        "未完了の`active` fixture",
+        "終了ブロックなく完了",
+        "状態遷移CLIと通常／完了lint",
+        "Stop登録がない",
         "trust",
         "write / shell",
         "## IDEとCLIの差分",
-        "Stop triggerはblockできず",
-        "LLM headless modeを使わない",
+        "| Stopフック | なし | なし |",
     ):
         assert expected in readme
 
 
 def test_readme_uses_replaceable_fixture_values() -> None:
     readme = (KIRO / "README.md").read_text(encoding="utf-8")
-    assert "https://github.com/OWNER/REPO/issues/1" in readme
+    acceptance = (ROOT / "docs" / "procedures" / "harness-acceptance.md").read_text(
+        encoding="utf-8"
+    )
+    assert "requirements.mdへ検証用Issue URL" in acceptance
     assert "project-uroboros-neo" not in readme
     assert "2026-07-15の実機結果" not in readme

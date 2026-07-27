@@ -1,8 +1,7 @@
-"""Ordering contracts between add-feature steps, the tasklist template and the validator.
+"""add-feature、tasklistテンプレート、validatorの順序契約。
 
-Each tasklist phase is consumed by exactly one add-feature step. These tests pin that
-mapping down so the neutral procedure, the Claude adapter, the template and the spec
-validator cannot drift apart again (see GitHub issue #36).
+チェックボックスは実装・4段検証・振り返りの3フェーズだけに置き、
+状態遷移・最終品質ゲート・PRは手順が管理する契約を固定する。
 """
 
 import re
@@ -15,7 +14,6 @@ TEMPLATE = ROOT / "docs" / "procedures" / "templates" / "tasklist.md"
 VALIDATOR = ROOT / "docs" / "procedures" / "validate-implementation.md"
 
 STEP_HEADING_PATTERN = re.compile(r"^## ステップ([\d.]+)", re.MULTILINE)
-UNCHECKED_PATTERN = re.compile(r"^\s*- \[ \] (.+)$", re.MULTILINE)
 TERMINATION_PATTERN = re.compile(r"全タスクが `\[x\]` になるまで")
 
 
@@ -73,8 +71,8 @@ def test_step5_loop_consumes_the_implementation_phase_only() -> None:
         step5 = step_section(path, "5")
         assert "実装フェーズの全タスクが `[x]` になるまで" in step5
         assert "このループが消化するのは実装フェーズだけで" in step5
-        assert "4段検証フェーズ・振り返りとドキュメント更新フェーズ・最終品質ゲートフェーズ" in step5
-        assert "それぞれステップ6 / 7 / 8が消化" in step5
+        assert "4段検証フェーズ・振り返りとドキュメント更新フェーズ" in step5
+        assert "それぞれステップ6 / 7が消化" in step5
         assert "ステップ5で先行して消化して" in step5
         # ループの進捗確認そのものが実装フェーズに限定されていること
         assert "**実装フェーズに**未完了タスク" in step5
@@ -115,7 +113,9 @@ def test_step7_consumes_the_retrospective_and_docs_phase() -> None:
     for path in workflow_files():
         step7 = step_section(path, "7")
         assert "このステップが消化するのは振り返りとドキュメント更新フェーズのチェックボックスである" in step7
-        assert "`[ ]` は最終品質ゲート行の1件だけになる" in step7
+        assert "全チェックボックスが`[x]`" in step7
+        assert "steering_state.py complete" in step7
+        assert "状態が`complete`" in step7
 
 
 def test_step7_reviews_docs_it_updates_without_returning_to_step6() -> None:
@@ -133,11 +133,20 @@ def test_step8_keeps_the_default_flow_and_branches_only_for_g3() -> None:
         assert "ステップ4のG3受け入れ要否判定に従って分岐する" in step8
         assert "### ステップ8-A: G3不要の場合(既定)" in step8
         assert "### ステップ8-B: G3受け入れが必要な場合" in step8
-        # 8-A(既定)は2回実行の終端ゲートを維持する
+        assert "--steering" in step8
+        assert "現在のステアリング名" in step8
+        assert "分岐内だけで行う" in step8
+        # 8-A(既定)は終端ゲートを1回だけ実行する
         assert_in_order(
             step8,
-            ("### ステップ8-A", "**ゲート1回目**", "**ゲート2回目**", "### ステップ8-B"),
+            ("### ステップ8-A", "**最終ゲート**", "### ステップ8-B"),
         )
+        default_branch = step8[
+            step8.index("### ステップ8-A") : step8.index("### ステップ8-B")
+        ]
+        assert "1回実行" in default_branch
+        assert "ゲート1回目" not in default_branch
+        assert "ゲート2回目" not in default_branch
 
 
 def test_step8b_defines_a_noncircular_g3_order() -> None:
@@ -158,13 +167,13 @@ def test_step8b_defines_a_noncircular_g3_order() -> None:
         )
         # 循環しない根拠と、やり直しの起点が明示されていること
         assert "製品ファイルを変更しない" in branch
-        assert "1回で緑になる" in branch
+        assert "1回で全緑" in branch
         assert "手順1(候補ゲート)からやり直す" in branch
         # 記録先は複製ではなく元リポジトリ側のステアリング
         assert "複製ではなく元リポジトリ側" in branch
         # 受け入れ記録はC3対象のチェックボックスにしない
         assert "コミット・PR作成・G3受け入れ記録" in step8
-        assert "チェックボックス(C3対象)にしない" in step8
+        assert "チェックボックスにしない" in step8
 
 
 def test_step8b_retry_reruns_the_verification_stages() -> None:
@@ -172,7 +181,8 @@ def test_step8b_retry_reruns_the_verification_stages() -> None:
     for path in workflow_files():
         step8 = step_section(path, "8")
         branch = step8[step8.index("### ステップ8-B") :]
-        assert "最終品質ゲート行を `[ ]` に戻す" in branch
+        assert "`active`へ戻し" in branch
+        assert "影響を受ける段の行を`[ ]`へ戻す" in branch
         assert "ステップ6の該当段から再実行する" in branch
 
 
@@ -186,20 +196,20 @@ def test_step4_g3_criterion_excludes_prose_only_adapter_edits() -> None:
 
 def test_template_phase_headings_declare_their_owning_step() -> None:
     text = TEMPLATE.read_text(encoding="utf-8")
-    assert "### フェーズとステップの対応" in text
+    assert "### フェーズとadd-featureステップ" in text
     assert "消化するステップごとに排他的に分割する" in text
     assert "ステップ5の実装ループが消化するのは実装フェーズだけ" in text
 
-    assert text.count("（実装フェーズ / add-feature ステップ5で消化）") >= 1
+    assert text.count("（実装フェーズ / ステップ5）") >= 1
     assert_in_order(
         text,
         (
-            "（実装フェーズ / add-feature ステップ5で消化）",
-            "## フェーズ3: 4段検証（add-feature ステップ6で消化）",
-            "## フェーズ4: 振り返りとドキュメント更新（add-feature ステップ7で消化）",
-            "## フェーズ5: 最終品質ゲート（add-feature ステップ8で消化）",
+            "（実装フェーズ / ステップ5）",
+            "## フェーズ3: 4段検証（ステップ6）",
+            "## フェーズ4: 振り返りとドキュメント更新（ステップ7）",
         ),
     )
+    assert "最終品質ゲート（add-feature ステップ8で消化）" not in text
 
 
 def test_template_verification_phase_lists_the_four_stages() -> None:
@@ -215,12 +225,14 @@ def test_template_verification_phase_lists_the_four_stages() -> None:
     )
 
 
-def test_template_final_gate_is_the_last_unchecked_box() -> None:
+def test_template_keeps_procedural_actions_out_of_checkboxes() -> None:
     text = TEMPLATE.read_text(encoding="utf-8")
-    unchecked = UNCHECKED_PATTERN.findall(text)
-    assert unchecked, "テンプレートにチェックボックスが必要"
-    assert unchecked[-1].startswith("最終品質ゲートを全体で1回パス")
-    assert sum(1 for task in unchecked if task.startswith("最終品質ゲートを全体で1回パス")) == 1
+    checkbox_lines = [line for line in text.splitlines() if "- [ ]" in line]
+    assert checkbox_lines, "テンプレートにチェックボックスが必要"
+    for procedural_action in ("steering_state.py complete", "最終品質ゲート", "コミット", "PR作成"):
+        assert all(procedural_action not in line for line in checkbox_lines)
+    assert "steering_state.py complete" in text
+    assert "最終品質ゲートを1回実行" in text
 
 
 def test_validator_scopes_task_check_to_the_implementation_phase() -> None:
@@ -241,12 +253,11 @@ def test_validator_does_not_flag_legitimately_pending_tasks() -> None:
         "段4(=本検証)の行",
         "段3(コードレビュー)の行",
         "振り返りとドキュメント更新フェーズ",
-        "最終品質ゲートフェーズ",
     ):
         assert pending in allow_list, f"許容リストに {pending} が必要"
 
 
-def test_validator_flags_a_prematurely_completed_final_gate() -> None:
+def test_validator_flags_a_premature_complete_state() -> None:
     text = VALIDATOR.read_text(encoding="utf-8")
-    assert "最終品質ゲート行が既に `[x]` になっている場合" in text
+    assert "状態が段4より前に`complete`へ変更された痕跡" in text
     assert "乖離として指摘する" in text

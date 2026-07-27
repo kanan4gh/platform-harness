@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 from dataclasses import dataclass
 from pathlib import Path
 import shutil
@@ -20,7 +21,10 @@ COMMANDS: tuple[Command, ...] = (
     Command("pytest", ("uv", "run", "pytest")),
     Command("ruff", ("uv", "run", "ruff", "check", ".")),
     Command("basedpyright", ("uv", "run", "basedpyright")),
-    Command("steering lint", ("uv", "run", "python3", "scripts/steering_lint.py")),
+    Command(
+        "steering lint",
+        ("uv", "run", "python3", "scripts/steering_lint.py", "--require-complete"),
+    ),
     Command(
         "metered automation lint",
         ("uv", "run", "python3", "scripts/metered_automation_lint.py"),
@@ -28,6 +32,18 @@ COMMANDS: tuple[Command, ...] = (
 )
 
 Runner = Callable[..., subprocess.CompletedProcess[bytes]]
+
+
+def commands_for(steering: str | None = None) -> tuple[Command, ...]:
+    """既定は最新、指定時は明示steeringを完了対象にしたコマンド列を返す。"""
+    if steering is None:
+        return COMMANDS
+    return tuple(
+        Command(command.name, (*command.argv, steering))
+        if command.name == "steering lint"
+        else command
+        for command in COMMANDS
+    )
 
 
 def validate_environment(root: Path) -> str | None:
@@ -74,11 +90,17 @@ def run_gate(
 
 def main(argv: list[str] | None = None) -> int:
     args = sys.argv[1:] if argv is None else argv
-    if len(args) > 1:
-        print("usage: local_quality_gate.py [PROJECT_ROOT]", file=sys.stderr)
-        return 2
-    root = Path(args[0]).resolve() if args else Path.cwd().resolve()
-    return run_gate(root)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("project_root", nargs="?", type=Path, default=Path.cwd())
+    parser.add_argument("--steering", help="完了対象の日付付きステアリング名")
+    try:
+        parsed = parser.parse_args(args)
+    except SystemExit as exc:
+        return exc.code if isinstance(exc.code, int) else 2
+    return run_gate(
+        parsed.project_root.resolve(),
+        commands=commands_for(parsed.steering),
+    )
 
 
 if __name__ == "__main__":

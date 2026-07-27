@@ -1,41 +1,78 @@
-"""ステアリング規律のlint CLI(ハーネス中立の決定論的チェック)。
+"""ステアリング規律の状態対応lint CLI。
 
-`.steering/[YYYYMMDD]-*/` の全ディレクトリに対して以下をチェックする:
+`.steering/[YYYYMMDD]-*/` を1回走査し、全ディレクトリへ通常規則を適用する。
+`--require-complete` 指定時は、同じ走査の中で対象1件だけに完了規則G1を追加する。
 
-- C1: requirements.md / design.md / tasklist.md の3ファイルが存在する
-      (requirements.md に軽量パス宣言(`軽量パス: 適用`)がある場合は design.md を省略できる)
-- C2: requirements.md に GitHub Issue URL が記載されている
-- C3: tasklist.md に未完了タスク(`- [ ]`)が残っていない
-- C4: 完了済み(未完了タスクなし)のtasklist.mdの「実装後の振り返り」セクションに
-      テンプレートプレースホルダ(`{...}`)が残っていない
-
-違反があれば一覧を出力して exit 1、なければ exit 0。
-Stopフック(.claude/hooks/check_tasklist_complete.py)は本モジュールの純関数を再利用する。
+- C1: 必須ファイル（軽量パスではdesign.mdを省略可）
+- C2: requirements.mdのGitHub Issue URL
+- C3: tasklist.mdの作業状態と未完了タスクの整合性
+- C4: complete相当tasklistの振り返り
+- C5: paused tasklistの中断記録
+- G1: 完了検査対象がcomplete相当
 """
 
+from __future__ import annotations
+
+import argparse
+from datetime import datetime
 import re
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import NamedTuple, Sequence
 
 STEERING_DIR_PATTERN = re.compile(r"^\d{8}-")
 INCOMPLETE_PATTERN = re.compile(r"^\s*- \[ \] (.+)$", re.MULTILINE)
-# 完了タスク(スキップ表記 `- [x] ~~...~~` を含む)。Stopフックの未着手判定に用いる。
-COMPLETED_PATTERN = re.compile(r"^\s*- \[[xX]\] ", re.MULTILINE)
-# Markdownフェンス付きコードブロックの開始・終了行(バッククォート/チルダ、3文字以上)。
 FENCE_PATTERN = re.compile(r"^[ \t]*(`{3,}|~{3,})")
 ISSUE_URL_PATTERN = re.compile(r"github\.com/[^/\s]+/[^/\s]+/issues/\d+")
 PLACEHOLDER_PATTERN = re.compile(r"\{[^{}\n]+\}")
-# テンプレートが定める宣言行全体だけに一致させ、類似ラベルや説明文を除外する。
 LIGHTWEIGHT_PATTERN = re.compile(r"^- \*\*軽量パス\*\*: 適用[ \t]*$", re.MULTILINE)
+STATE_PATTERN = re.compile(r"^- \*\*状態\*\*: (.+?)[ \t]*$", re.MULTILINE)
+STATE_UPDATED_PATTERN = re.compile(
+    r"^- \*\*状態更新日時\*\*: (.+?)[ \t]*$", re.MULTILINE
+)
+STATE_HARNESS_PATTERN = re.compile(
+    r"^- \*\*使用ハーネス\*\*: (.+?)[ \t]*$", re.MULTILINE
+)
+STATE_SECTION_PATTERN = re.compile(
+    r"^## 作業状態[ \t]*\n.*?(?=^## |\Z)",
+    re.MULTILINE | re.DOTALL,
+)
+PAUSE_HEADING_PATTERN = re.compile(r"^### 中断記録: (.+?)[ \t]*$", re.MULTILINE)
+SECTION_HEADING_PATTERN = re.compile(r"^#{2,3} ", re.MULTILINE)
+
+VALID_STATES = frozenset({"active", "paused", "complete"})
+PAUSE_REQUIRED_LABELS = (
+    "使用ハーネス",
+    "完了済みの範囲",
+    "未コミット変更",
+    "再開位置",
+    "中断理由",
+)
 RETROSPECTIVE_HEADING = "## 実装後の振り返り"
 REQUIRED_FILES = ("requirements.md", "design.md", "tasklist.md")
+LATEST_TARGET = "latest"
 
 
 class Violation(NamedTuple):
     directory: str
     check_id: str
     message: str
+
+
+class TaskState(NamedTuple):
+    value: str | None
+    updated_at: str | None
+    harness: str | None
+    error: str | None
+
+
+class TasklistContext(NamedTuple):
+    """1回だけ読み込んだtasklistと解析結果。"""
+
+    text: str
+    incomplete: tuple[str, ...]
+    state: TaskState
+    effective: TaskState
 
 
 def iter_steering_dirs(project_root: Path) -> list[Path]:
@@ -50,7 +87,7 @@ def iter_steering_dirs(project_root: Path) -> list[Path]:
 
 
 def find_latest_tasklist(project_root: Path) -> Path | None:
-    """最新(日付降順の先頭)のステアリングディレクトリのtasklist.mdを返す。"""
+    """最新の日付付きステアリングのtasklist.mdを返す。"""
     dirs = iter_steering_dirs(project_root)
     if not dirs:
         return None
@@ -59,14 +96,7 @@ def find_latest_tasklist(project_root: Path) -> Path | None:
 
 
 def strip_code_fences(text: str) -> str:
-    """Markdownフェンス付きコードブロック内の行を空行に置換したテキストを返す。
-
-    テンプレート等が記法の**例示**をコードフェンス内に持つため、例示のチェックボックスを
-    実タスクと取り違えないための前処理。行番号を保つため除去ではなく空行化する。
-
-    終了フェンスは開始と同じ文字種・開始以上の長さで、マーカー以降に非空白文字がない行。
-    閉じられていないフェンスは以降すべてを例示扱いにして終了する(例外を投げない)。
-    """
+    """Markdownフェンス付きコードブロック内を空行化する。"""
     lines = text.split("\n")
     stripped: list[str] = []
     open_marker: str | None = None
@@ -76,7 +106,6 @@ def strip_code_fences(text: str) -> str:
             if match is None:
                 stripped.append(line)
             else:
-                # info string(```markdown 等)を許容して開始フェンスとみなす
                 open_marker = match.group(1)
                 stripped.append("")
             continue
@@ -87,47 +116,111 @@ def strip_code_fences(text: str) -> str:
 
 
 def _closes_fence(match: re.Match[str], line: str, open_marker: str) -> bool:
-    """フェンス記号にマッチした行が、開いているフェンスの終了行かを返す。"""
     marker = match.group(1)
     if marker[0] != open_marker[0] or len(marker) < len(open_marker):
         return False
-    # 終了フェンスはinfo stringを持てない
     return not line[match.end() :].strip()
 
 
 def find_incomplete_tasks(text: str) -> list[str]:
-    """未完了タスク(`- [ ]`)の内容を出現順に返す。
-
-    **コードフェンスを除外しない**のは意図的である。除外機構は未完了タスクを隠す抜け穴に
-    なり得るのに対し、過検出はPR前に人が気づける安全側の失敗であるため。
-    """
+    """未完了タスクを出現順に返す。コードフェンスも安全側で検査対象にする。"""
     return INCOMPLETE_PATTERN.findall(text)
 
 
-def has_completed_tasks(text: str) -> bool:
-    """完了タスク(`- [x]`/`- [X]`)が1つ以上あるかを返す。
-
-    Stopフックの「未着手フェイルオープン」判定に用いる補助関数。lint本体(C3)は
-    未完了の有無だけを見るため本関数を使わない(CIゲートは未着手でも未完了を検出する)。
-
-    こちらは `find_incomplete_tasks` と異なりコードフェンスを除外する。例示を完了タスクと
-    誤認すると、作りたての未着手tasklistが「着手済み」と判定され、計画承認待ちの停止に
-    Stopフックが割り込んでしまうため(実害のある誤判定)。
-    """
-    return bool(COMPLETED_PATTERN.search(strip_code_fences(text)))
-
-
 def has_lightweight_declaration(steering_dir: Path) -> bool:
-    """requirements.md に軽量パス宣言(`軽量パス: 適用`)があるかを返す。"""
     requirements = steering_dir / "requirements.md"
     if not requirements.is_file():
         return False
-    text = requirements.read_text(encoding="utf-8")
-    return bool(LIGHTWEIGHT_PATTERN.search(strip_code_fences(text)))
+    return bool(
+        LIGHTWEIGHT_PATTERN.search(strip_code_fences(requirements.read_text(encoding="utf-8")))
+    )
+
+
+def parse_task_state(text: str) -> TaskState:
+    """tasklistの状態ブロックを解析する。旧形式はvalue=Noneで返す。"""
+    visible = strip_code_fences(text)
+    sections = list(STATE_SECTION_PATTERN.finditer(visible))
+    if not sections:
+        if STATE_PATTERN.search(visible):
+            return TaskState(None, None, None, "状態宣言は「## 作業状態」内に置いてください")
+        return TaskState(None, None, None, None)
+    if len(sections) != 1:
+        return TaskState(None, None, None, "作業状態セクションが複数あります")
+    state_text = sections[0].group(0)
+    values = STATE_PATTERN.findall(state_text)
+    updated_values = STATE_UPDATED_PATTERN.findall(state_text)
+    harness_values = STATE_HARNESS_PATTERN.findall(state_text)
+
+    if not values:
+        return TaskState(None, None, None, "作業状態セクションに状態宣言がありません")
+    if len(values) != 1:
+        return TaskState(None, None, None, "状態宣言が複数あります")
+
+    value = values[0].strip()
+    if value not in VALID_STATES:
+        return TaskState(value, None, None, f"未知の状態です: {value}")
+    if len(updated_values) != 1:
+        return TaskState(value, None, None, "状態更新日時は1件必要です")
+    if len(harness_values) != 1:
+        return TaskState(value, None, None, "使用ハーネスは1件必要です")
+
+    updated_at = updated_values[0].strip()
+    harness = harness_values[0].strip()
+    if not _is_timezone_aware_iso8601(updated_at):
+        return TaskState(
+            value,
+            updated_at,
+            harness,
+            "状態更新日時はタイムゾーン付きISO 8601で記録してください",
+        )
+    if not harness:
+        return TaskState(value, updated_at, harness, "使用ハーネスが空です")
+    return TaskState(value, updated_at, harness, None)
+
+
+def _is_timezone_aware_iso8601(value: str) -> bool:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None
+
+
+def effective_state(text: str) -> TaskState:
+    """旧完了tasklistをcomplete相当として補完した状態を返す。"""
+    state = parse_task_state(text)
+    if state.value is None and state.error is None and not find_incomplete_tasks(text):
+        return TaskState("complete", None, None, None)
+    return state
+
+
+def load_tasklist_context(steering_dir: Path) -> TasklistContext | None:
+    """tasklistを1回読み、通常規則と完了規則で共有する解析結果を返す。"""
+    tasklist = steering_dir / "tasklist.md"
+    if not tasklist.is_file():
+        return None
+    text = tasklist.read_text(encoding="utf-8")
+    incomplete = tuple(find_incomplete_tasks(text))
+    state = parse_task_state(text)
+    effective = state
+    if state.value is None and state.error is None and not incomplete:
+        effective = TaskState("complete", None, None, None)
+    return TasklistContext(text, incomplete, state, effective)
+
+
+def has_retrospective_content(text: str) -> bool:
+    """振り返りに見出し以外の記入が1行以上あるかを返す。"""
+    _, separator, retrospective = text.partition(RETROSPECTIVE_HEADING)
+    if not separator:
+        return False
+    return any(
+        stripped and not stripped.startswith("#") and stripped != "---"
+        for line in retrospective.splitlines()
+        if (stripped := line.strip())
+    )
 
 
 def check_required_files(steering_dir: Path) -> list[Violation]:
-    """C1: 3ファイルの存在チェック。軽量パス宣言がある場合は design.md を省略できる。"""
     missing = [name for name in REQUIRED_FILES if not (steering_dir / name).is_file()]
     if "design.md" in missing and has_lightweight_declaration(steering_dir):
         missing.remove("design.md")
@@ -135,48 +228,72 @@ def check_required_files(steering_dir: Path) -> list[Violation]:
 
 
 def check_issue_url(steering_dir: Path) -> list[Violation]:
-    """C2: requirements.md への GitHub Issue URL 記載チェック。"""
     requirements = steering_dir / "requirements.md"
     if not requirements.is_file():
-        return []  # ファイル欠落はC1が報告する
+        return []
     if ISSUE_URL_PATTERN.search(requirements.read_text(encoding="utf-8")):
         return []
-    return [Violation(steering_dir.name, "C2", "requirements.md に GitHub Issue URL がありません")]
+    return [Violation(steering_dir.name, "C2", "requirements.md にGitHub Issue URLがありません")]
 
 
-def check_incomplete_tasks(steering_dir: Path) -> list[Violation]:
-    """C3: tasklist.md の未完了タスクチェック。"""
-    tasklist = steering_dir / "tasklist.md"
-    if not tasklist.is_file():
-        return []  # ファイル欠落はC1が報告する
-    incomplete = find_incomplete_tasks(tasklist.read_text(encoding="utf-8"))
-    if not incomplete:
+def check_task_state(
+    steering_dir: Path, context: TasklistContext | None = None
+) -> list[Violation]:
+    """C3: 状態と未完了タスクの整合性を1回評価する。"""
+    context = context or load_tasklist_context(steering_dir)
+    if context is None:
         return []
-    return [
-        Violation(
-            steering_dir.name,
-            "C3",
-            f"tasklist.md に未完了タスクが{len(incomplete)}件残っています(先頭: {incomplete[0]})",
-        )
-    ]
+    incomplete = context.incomplete
+    state = context.state
 
-
-def check_retrospective_placeholders(steering_dir: Path) -> list[Violation]:
-    """C4: 完了済みtasklist.mdの振り返りセクションのプレースホルダ残存チェック。
-
-    未完了タスクが残っている(=作業中)間は対象外とし、C3に報告を委ねる。
-    プレースホルダ検索を振り返りセクションに限定するのは、本文中のコード片等の
-    波括弧を誤検出しないため。
-    """
-    tasklist = steering_dir / "tasklist.md"
-    if not tasklist.is_file():
+    if state.error is not None:
+        return [Violation(steering_dir.name, "C3", state.error)]
+    if state.value is None:
+        if incomplete:
+            return [
+                Violation(
+                    steering_dir.name,
+                    "C3",
+                    "未完了タスクがある旧形式tasklistには作業状態の宣言が必要です",
+                )
+            ]
         return []
-    text = tasklist.read_text(encoding="utf-8")
-    if find_incomplete_tasks(text):
+    if state.value == "complete" and incomplete:
+        return [
+            Violation(
+                steering_dir.name,
+                "C3",
+                f"状態がcompleteですが未完了タスクが{len(incomplete)}件あります"
+                f"(先頭: {incomplete[0]})",
+            )
+        ]
+    if state.value == "paused" and not incomplete:
+        return [
+            Violation(
+                steering_dir.name,
+                "C3",
+                "状態がpausedですが未完了タスクがありません。completeへ遷移してください",
+            )
+        ]
+    return []
+
+
+def check_retrospective(
+    steering_dir: Path, context: TasklistContext | None = None
+) -> list[Violation]:
+    """C4: complete相当tasklistの振り返りを検査する。"""
+    context = context or load_tasklist_context(steering_dir)
+    if context is None:
+        return []
+    text = context.text
+    state = context.effective
+    if state.error is not None or state.value != "complete" or context.incomplete:
         return []
     _, separator, retrospective = text.partition(RETROSPECTIVE_HEADING)
     if not separator:
         return [Violation(steering_dir.name, "C4", "「実装後の振り返り」セクションがありません")]
+    if not has_retrospective_content(text):
+        return [Violation(steering_dir.name, "C4", "「実装後の振り返り」が未記入です")]
     placeholders = PLACEHOLDER_PATTERN.findall(retrospective)
     if not placeholders:
         return []
@@ -184,32 +301,158 @@ def check_retrospective_placeholders(steering_dir: Path) -> list[Violation]:
         Violation(
             steering_dir.name,
             "C4",
-            f"振り返りにプレースホルダが{len(placeholders)}件残っています(先頭: {placeholders[0]})",
+            f"振り返りにプレースホルダが{len(placeholders)}件残っています"
+            f"(先頭: {placeholders[0]})",
         )
     ]
 
 
-def lint(project_root: Path) -> list[Violation]:
-    """全ステアリングディレクトリにC1〜C4を適用し、違反を集約する。"""
+def find_pause_record(text: str, updated_at: str) -> str | None:
+    """状態更新日時に対応する最新の中断記録本文を返す。"""
+    visible = strip_code_fences(text)
+    latest: str | None = None
+    for match in PAUSE_HEADING_PATTERN.finditer(visible):
+        if match.group(1).strip() != updated_at:
+            continue
+        start = match.end()
+        next_heading = SECTION_HEADING_PATTERN.search(visible, start)
+        end = next_heading.start() if next_heading is not None else len(visible)
+        latest = visible[start:end]
+    return latest
+
+
+def missing_pause_record_labels(record: str) -> list[str]:
+    """中断記録の空でない必須ラベルのうち欠けているものを返す。"""
+    return [
+        label
+        for label in PAUSE_REQUIRED_LABELS
+        if not re.search(rf"^- \*\*{re.escape(label)}\*\*: \S", record, re.MULTILINE)
+    ]
+
+
+def check_pause_record(
+    steering_dir: Path, context: TasklistContext | None = None
+) -> list[Violation]:
+    """C5: paused状態に対応する定型中断記録を検査する。"""
+    context = context or load_tasklist_context(steering_dir)
+    if context is None:
+        return []
+    text = context.text
+    state = context.state
+    if state.error is not None or state.value != "paused" or state.updated_at is None:
+        return []
+    record = find_pause_record(text, state.updated_at)
+    if record is None:
+        return [
+            Violation(
+                steering_dir.name,
+                "C5",
+                "pausedの状態更新日時に対応する中断記録がありません",
+            )
+        ]
+    missing = missing_pause_record_labels(record)
+    if not missing:
+        return []
+    return [
+        Violation(
+            steering_dir.name,
+            "C5",
+            f"中断記録の必須項目がありません: {', '.join(missing)}",
+        )
+    ]
+
+
+def check_completion_target(
+    steering_dir: Path, context: TasklistContext | None = None
+) -> list[Violation]:
+    """G1: 完了検査対象がcomplete相当であることだけを追加検査する。"""
+    context = context or load_tasklist_context(steering_dir)
+    if context is None:
+        return []
+    state = context.effective
+    if state.error is not None or state.value == "complete":
+        return []
+    return [
+        Violation(
+            steering_dir.name,
+            "G1",
+            f"完了検査の対象ですが状態が{state.value or '未宣言'}です",
+        )
+    ]
+
+
+def resolve_completion_target(project_root: Path, value: str) -> Path:
+    """latestまたは日付付きディレクトリ名を完了対象へ解決する。"""
+    dirs = iter_steering_dirs(project_root)
+    if value == LATEST_TARGET:
+        if not dirs:
+            raise ValueError("完了検査対象のステアリングがありません")
+        return dirs[-1]
+
+    candidate = Path(value)
+    if candidate.is_absolute():
+        resolved = candidate.resolve()
+    elif len(candidate.parts) == 1:
+        resolved = (project_root / ".steering" / candidate).resolve()
+    else:
+        resolved = (project_root / candidate).resolve()
+    steering_root = (project_root / ".steering").resolve()
+    if resolved.parent != steering_root:
+        raise ValueError("完了検査対象は.steering直下の日付付きディレクトリに限ります")
+    if not STEERING_DIR_PATTERN.match(resolved.name) or not resolved.is_dir():
+        raise ValueError(f"完了検査対象が見つかりません: {value}")
+    return resolved
+
+
+def lint(project_root: Path, completion_target: Path | None = None) -> list[Violation]:
+    """通常規則を単一走査し、対象だけにG1を追加する。"""
     violations: list[Violation] = []
+    normalized_target = completion_target.resolve() if completion_target is not None else None
     for steering_dir in iter_steering_dirs(project_root):
+        context = load_tasklist_context(steering_dir)
         violations.extend(check_required_files(steering_dir))
         violations.extend(check_issue_url(steering_dir))
-        violations.extend(check_incomplete_tasks(steering_dir))
-        violations.extend(check_retrospective_placeholders(steering_dir))
+        violations.extend(check_task_state(steering_dir, context))
+        violations.extend(check_retrospective(steering_dir, context))
+        violations.extend(check_pause_record(steering_dir, context))
+        if normalized_target is not None and steering_dir.resolve() == normalized_target:
+            violations.extend(check_completion_target(steering_dir, context))
     return violations
 
 
-def main() -> int:
-    project_root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
-    violations = lint(project_root)
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("project_root", nargs="?", type=Path, default=Path.cwd())
+    parser.add_argument(
+        "--require-complete",
+        nargs="?",
+        const=LATEST_TARGET,
+        metavar="STEERING",
+        help="最新または指定したステアリングを完了対象にする",
+    )
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    project_root = args.project_root.resolve()
+    completion_target: Path | None = None
+    if args.require_complete is not None:
+        try:
+            completion_target = resolve_completion_target(project_root, args.require_complete)
+        except ValueError as exc:
+            print(f"steering lint: {exc}", file=sys.stderr)
+            return 2
+    violations = lint(project_root, completion_target)
     if not violations:
         return 0
     print(f"steering lint: {len(violations)}件の違反があります")
-    for v in violations:
-        print(f"  [{v.check_id}] .steering/{v.directory}/: {v.message}")
+    for violation in violations:
+        print(
+            f"  [{violation.check_id}] .steering/{violation.directory}/: {violation.message}"
+        )
     return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

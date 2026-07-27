@@ -9,6 +9,7 @@ description: 作業指示毎の作業計画、タスクリストをドキュメ�
 
 ## Codex 固有の注記
 
-- 手順書の「規律の担保」は、このプロジェクトでは `.codex/hooks.json` のStopフックが実装する(未完了タスクが残っているとセッション終了がブロックされる。プロジェクトをtrustした場合のみ有効)
-- Claude Codeと異なり、実装ファイル編集中のリマインド(PostToolUse相当)はない。tasklist.mdのリアルタイム更新は自律的に徹底すること
+- CodexではStopフックを使用しない。通常の応答終了は作業状態を変更せず、tasklist.mdのリアルタイム更新は自律的に徹底する
+- 明示的な中断・再開・完了では`python3 scripts/steering_state.py pause / resume / complete`を使い、変更後に通常lintまたは完了lintで確認する
 - 承認が必要な場面では、AGENTS.md正文のテキスト方式(選択肢を明示して回答を待つ)を使う
+- **再開依頼を受けたら**: 最新の日付付きtasklistの`paused`状態と中断記録を読み、`resume --harness Codex`で`active`へ戻してからモード2を続行する。ハーネス切り替え時はrequirements.mdの使用ハーネス欄に「Codex」を追記する

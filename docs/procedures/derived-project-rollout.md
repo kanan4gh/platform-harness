@@ -40,7 +40,7 @@
 | G0 対象選択・阻害要因裁定 | 対象remoteを指定し、競合PR等をマージ・破棄・新移行へ引継ぎのいずれにするか裁定 | 候補・状態・競合範囲・再preflight結果 |
 | G1 計画承認 | 対象側requirements / design / tasklistを承認 | 差分調査、manifest、検証計画、bootstrap executor |
 | G2 競合裁定 | 既存固有設定を保持・置換・統合のどれにするか | ファイル単位の比較と選択肢 |
-| G3 対話型受入 | Claude / Codex / KiroのUI・権限・Stopを人が操作 | 無課金の実機手順と記録テンプレート |
+| G3 対話型受入 | Claude / Codex / KiroのUI・権限・終了非ブロック・状態/lint経路を人が操作 | 無課金の実機手順と記録テンプレート |
 | G4 マージ | PRをレビューしてマージ | ローカル品質ゲート、差分、受入証跡 |
 
 G2はG1で裁定できなかった実競合がある場合だけ停止する。競合がなければ、G1で承認されたtasklist完了まで自動継続する。
@@ -134,17 +134,16 @@ activeな移行PRや同じ正典ファイルを変更するbranchがある場合
 
 1. 対象固有の既存テスト、lint、型検査を実行する。
 2. 導入したsteering lint、有料自動化lint、アダプタ構造テストを実行する。
-3. 対象に合わせた`local_quality_gate.py`を単一入口として実行する。
-4. docs変更を独立した文脈でレビューし、実装とsteeringの準拠を検証する。
-5. アダプタ・権限・hooksを変更したハーネスだけ、G3で人がIDEまたは対話型CLI受け入れを行う。G3の実施位置と記録・再ゲートの順序は`docs/procedures/add-feature.md`ステップ8-B(候補ゲート → 候補コミット → G3 → `acceptance-record.md`へ記録 → 最終ゲート → 記録コミット → PR)に従う。
-6. GitHub Actions自動runと有料LLM headless mode起動が0件であることを記録する。
+3. docs変更を独立した文脈でレビューし、実装とsteeringの準拠を検証する。
+4. アダプタ・権限・hooks変更についてG3要否と対象ハーネスを確定する。G3要の場合は人がIDEまたは対話型CLI受け入れを行うが、実施自体はフェーズ5で状態を`complete`へ遷移し候補ゲートと候補コミットを終えた後に行う。
+5. GitHub Actions自動runと有料LLM headless mode起動が0件であることを記録する。
 
 1つのハーネスが受け入れ不能でも、別ハーネスの合格で代替しない。能力差、代替した決定論的ゲート、未確認理由を記録する。
 
 ## フェーズ5: PR、G4マージ、台帳更新
 
-1. tasklistへ同期元、manifest、bootstrap executor、authority handoff、検証を記録する。実機受入(G3)の結果は`acceptance-record.md`へ記録し、記録後に最終ゲートを再実行する(`add-feature.md`ステップ8-B手順4〜5。記録をtasklistのチェックボックスにしない)。
-2. 対象側のConventional CommitとPRを作成する。
+1. tasklistへ同期元、manifest、bootstrap executor、authority handoff、検証を記録し、全チェック完了後に状態を`complete`へ遷移する。
+2. 対象に合わせた`local_quality_gate.py`を単一入口とし、G3不要なら`add-feature.md`ステップ8-A、G3要ならステップ8-Bに従う。後者は候補ゲート → 候補コミット → G3 → `acceptance-record.md`へ記録 → 最終ゲート → 記録コミット → PRの順で行う。状態遷移・ゲート・記録をtasklistのチェックボックスにしない。
 3. G4で人がPRをマージする。
 4. 必要な対象プロジェクトreleaseを作成する。
 5. platform-harnessの`docs/derived-projects.md`を別の台帳更新PRで更新する。
@@ -202,9 +201,9 @@ activeな移行PRや同じ正典ファイルを変更するbranchがある場合
 |---|---|
 | Preserve | `src/`、`tests/conftest.py`、`tests/integration/`、`tests/unit/`、`docs/{architecture,development-guidelines,functional-design,glossary,product-requirements,repository-structure}.md`、`CLAUDE.md`の「プロダクト固有層」「技術スタック固有層」section |
 | Replace from canonical | `CLAUDE.md`の「汎用層」「補足：この文書の運用方法」section、`.claude/commands/{add-feature,review-docs,setup-project}.md`、`.claude/skills/steering/`と旧steering templates |
-| Add from canonical | `AGENTS.md`、`docs/procedures/`とtemplates、`.agents/skills/`、`.codex/`（`hooks/state/`を除く）、`.kiro/`（`hooks/state/`を除く）、`scripts/{steering_lint,metered_automation_lint,local_quality_gate}.py`、対応する`tests/{adapters,hooks,lint,procedures,scripts}/`のうち対象に存在しないpath |
+| Add from canonical | `AGENTS.md`、`docs/procedures/`とtemplates、`.agents/skills/`、`.codex/`、`.kiro/`、`scripts/{steering_lint,steering_state,metered_automation_lint,local_quality_gate}.py`、対応する`tests/{adapters,hooks,lint,procedures,scripts}/`のうち対象に存在しないpath |
 | Merge manually | `CLAUDE.md`の「プロジェクトメモリ」section、`.claude/settings.json`、`.claude/README.md`、`.claude/agents/`、`.claude/skills/`のうち`steering/`以外、`.claude/hooks/*.py`、`docs/ideas/harness-engineering.md`、`.gitignore`、`pyproject.toml`、`uv.lock`、`.devcontainer/devcontainer.json`、`.devcontainer/postCreate.sh`、`.mcp.json.example` |
-| Exclude | `.coverage`、`.playwright-mcp/`、`.claude/hooks/state/`、`.codex/hooks/state/`、`.kiro/hooks/state/`、`**/__pycache__/`、再生成可能な`.devcontainer/devcontainer-lock.json` |
+| Exclude | `.coverage`、`.playwright-mcp/`、`.claude/hooks/state/`、`**/__pycache__/`、再生成可能な`.devcontainer/devcontainer-lock.json` |
 
 ### 移行順序
 

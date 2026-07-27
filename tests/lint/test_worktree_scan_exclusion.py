@@ -24,7 +24,7 @@ IGNORED_PATHS = (
 # 過剰無視の検出用。`.claude/` 直下の管理対象は走査され続けなければならない
 TRACKED_PATHS = (
     ".claude/commands/add-feature.md",
-    ".claude/hooks/check_tasklist_complete.py",
+    ".claude/hooks/remind_tasklist_update.py",
     ".claude/README.md",
 )
 
