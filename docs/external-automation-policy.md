@@ -16,7 +16,7 @@ pytest、ruff、basedpyright、steering lint、metered automation lintを固定�
 
 ### 対話型実機受け入れ（変更種別に応じて必須）
 
-LLMの判断やハーネスUIを確認する場合は`docs/procedures/harness-acceptance.md`に従い、利用を許可されたIDEまたは対話型CLIで行う。自動化できる構造、形式、フック判定はpytestへ寄せる。
+LLMの判断やハーネスUIを確認する場合は`docs/procedures/harness-acceptance.md`に従い、利用を許可されたIDEまたは対話型CLIで行う。自動化できる構造、形式、状態遷移・lint判定、Stop不在契約はpytestへ寄せる。
 
 ### GitHub Actions（任意）
 

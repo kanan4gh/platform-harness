@@ -255,8 +255,8 @@ def test_outfit_manifest_defines_concrete_non_overlapping_boundaries() -> None:
         "`.claude/commands/{add-feature,review-docs,setup-project}.md`、"
         "`.claude/skills/steering/`と旧steering templates",
         "Add from canonical": "`AGENTS.md`、`docs/procedures/`とtemplates、`.agents/skills/`、"
-        "`.codex/`（`hooks/state/`を除く）、`.kiro/`（`hooks/state/`を除く）、"
-        "`scripts/{steering_lint,metered_automation_lint,"
+        "`.codex/`、`.kiro/`、"
+        "`scripts/{steering_lint,steering_state,metered_automation_lint,"
         "local_quality_gate}.py`、対応する`tests/{adapters,hooks,lint,procedures,"
         "scripts}/`のうち対象に存在しないpath",
         "Merge manually": "`CLAUDE.md`の「プロジェクトメモリ」section、"
@@ -266,7 +266,7 @@ def test_outfit_manifest_defines_concrete_non_overlapping_boundaries() -> None:
         "`uv.lock`、`.devcontainer/devcontainer.json`、"
         "`.devcontainer/postCreate.sh`、`.mcp.json.example`",
         "Exclude": "`.coverage`、`.playwright-mcp/`、`.claude/hooks/state/`、"
-        "`.codex/hooks/state/`、`.kiro/hooks/state/`、`**/__pycache__/`、"
+        "`**/__pycache__/`、"
         "再生成可能な`.devcontainer/devcontainer-lock.json`",
     }
 
@@ -277,6 +277,7 @@ def test_procedure_requires_local_and_interactive_validation_without_paid_automa
     assert "人がIDEまたは対話型CLI受け入れ" in text
     assert "GitHub Actions自動runと有料LLM headless mode起動が0件" in text
     assert "従量課金型headless mode" in text
+    assert "`.kiro/hooks/state/`" not in outfit_manifest()["Add from canonical"]
 
 
 def test_platform_issue_does_not_modify_derived_project() -> None:

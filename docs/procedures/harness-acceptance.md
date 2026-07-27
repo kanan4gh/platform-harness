@@ -1,124 +1,138 @@
-# ハーネス実機受け入れ手順
+# ハーネス対話型受け入れ手順
 
-## 目的
-
-Claude Code、Codex、KiroのUI・対話・承認・Stop挙動を、従量課金型headless modeを使わずに確認する。構造や形式の検査はpytestへ寄せ、本手順では実セッションでしか確認できない項目だけを扱う。
+Claude Code、Codex、Kiroの表示・読込・権限・状態操作と応答終了を、従量課金型headless modeを使わずに確認する。構造と状態/lintロジックはpytestへ寄せ、本手順では実セッションでしか確認できない項目だけを扱う。
 
 ## 実施条件
 
-- 利用を許可されたIDEまたは対話型CLIを使う
-- 対象リポジトリとcommitまたはtagを固定する
-- 書き込み確認は`/private/tmp`等の使い捨て複製で行う
-- ポリシーで禁止された非対話LLM実行を代替手段にしない
-- 実施前に`uv run python3 scripts/local_quality_gate.py`が成功している
+- ローカル品質ゲートが1回で全緑になっている
+- 対象commitが固定されている
+- `/private/tmp`等の使い捨てclean cloneで実施する
+- 対話型IDEまたは対話型CLIを使う
+- Claude Codeのprint mode、Codexの非対話exec mode等、従量課金型headless modeを使わない
 
 ## add-feature ステップ8-Bとの接続
 
-上の実施条件(ゲート成功済み・commit固定・使い捨て複製)と「結果を記録に残す」という要請は、素朴に並べると循環する。記録を先に書けばゲートの検証対象が古くなり、ゲートを先に回せば記録が検証対象外になるためである。`docs/procedures/add-feature.md` ステップ8-Bは、**受け入れ記録が製品ファイルを変更しない**ことを使ってこれを直線化する。**順序の正はステップ8-Bにあり、本節はG3側から見たその接続を示す。** G3が必要な変更では次の順序で実行する。
+受け入れ結果を記録すると候補ゲート後にファイルが増える。この循環は、**受け入れ記録が製品ファイルを変更しない**ことを使って次の順序で直線化する。
 
-1. **候補ゲート**: ローカル品質ゲートを2回実行し、2回目で全緑にする(この時点でtasklistの最終品質ゲート行は`[x]`)
-2. **候補コミット**: 全変更をコミットする。これが本手順の「固定commit」になる
-3. **G3実施**: 候補コミットを`/private/tmp`等へclean cloneし、下記の共通準備とハーネス別手順を実施する
-4. **結果記録**: 観察結果と証跡を、**複製ではなく元リポジトリ側**の対象フィーチャーのステアリングディレクトリ(`.steering/[日付]-[タスク名]/`)の`acceptance-record.md`へ記録する。共通準備で複製内に作った確認用fixtureステアリングは複製ごと捨てる。記録はtasklistのチェックボックスにしない
-5. **最終ゲート**: ゲートを再実行して全緑を確認する。最終品質ゲート行は手順1で既に`[x]`のため自己参照が起きず、**1回で緑になる**。これが記録を含む最終ファイル状態の検証である(`.steering`は有料自動化lintの除外対象のため、記録本文が検査に干渉することもない)
-6. **記録コミット**: `acceptance-record.md`をコミットする。手順4は製品ファイルを変更しないため、手順3で観察した実機挙動は候補コミットのまま有効である
-7. **push / PR作成**: PR本文にG3の判定結果を含める
+1. **候補ゲート**: ローカル品質ゲートを1回で全緑にする
+2. **候補コミット**: 全変更をコミットし、G3の固定commitにする
+3. **G3実施**: 固定commitをclean cloneして対話型受け入れを行う
+4. **結果記録**: 観察結果を元リポジトリ側の`acceptance-record.md`へ記録する
+5. **最終ゲート**: 記録を含む最終状態でゲートを1回実行し全緑にする
+6. **記録コミット**: acceptance recordをコミットする
+7. **push / PR作成**: PR本文にG3結果を含める
 
-**不合格・保留だった場合は手順1(候補ゲート)からやり直す。** 記録だけを追記して押し切らない。製品ファイルを修正した以上、その修正に対する実機挙動は未観察だからである。修正がステップ6の検証対象に及ぶ場合は、add-feature ステップ8-Bの規定に従って4段検証からやり直す。
-
-G3が不要な変更(手順書・テンプレート・永続ドキュメント・テストのみの変更等)では本節を適用せず、add-feature ステップ8-Aの既定フローをそのまま使う。要否判定はステップ4で行い、`requirements.md`に記録する。
+不合格・保留で製品ファイルを修正した場合は、状態を`active`へ戻し、影響する検証・振り返り・`complete`遷移・候補ゲートからやり直す。G3不要の変更ではadd-featureステップ8-Aを使う。
 
 ## 自動検証との境界
 
 | 観点 | 検証方法 |
 |---|---|
 | ファイル存在、JSON / Markdown構造 | pytest |
-| フックstdin / stdout、block判定、fail-open | pytest |
+| 状態解析、pause / resume / complete、通常/完了lint | pytestと実スクリプト |
+| Stopフック登録・実装の不在 | pytest |
 | 禁止headlessシグネチャの不在 | metered automation lint |
-| スキル・エージェントの画面表示 | 対話型実機確認 |
-| 指定ファイルの実読込 | 対話型実機確認 |
+| スキル・エージェントの表示と実読込 | 対話型実機確認 |
 | read / write / shellの承認UI | 対話型実機確認 |
-| Stopフックのランタイム発火 | 対話型実機確認 |
-
-表示、読込、実行、権限、Stopは別の確認段階とする。表示されたことを読込・実行の証拠にせず、実際の出力またはUIを個別に記録する。
+| 未完了tasklistを読むだけの依頼が正常終了すること | 対話型実機確認 |
 
 ## 共通準備
 
-1. 対象commitまたはtagを`/private/tmp`配下へ複製する
-2. 未コミット変更がないことを確認する
-3. 既存ステアリングより辞書順で後になる確認専用の最小steering(以下**確認用fixtureステアリング**)を人が作る
-4. `find .steering -mindepth 1 -maxdepth 1 -type d -name '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*' -print | sort | tail -1`で、lintと同じ日付接頭辞の選択対象を確認する
-5. 記録テンプレートを確認用fixtureステアリング内の`acceptance-record.md`へ複製する
-6. ハーネス名、バージョン、IDE / CLI、設定、対象commitを記録する
-7. プロンプトは読み取り確認と安全な一時ファイル操作に限定する
-
-受け入れ用steeringの作成をハーネスへ依頼しない。対象製品全体へ計画が拡大する可能性があるため、fixtureは人が最小形を固定する。
-
-**確認用fixtureステアリングとsentinel tasklistは、使い捨て複製の中だけに作る。** 元リポジトリの作業ツリーに作ると、未完了`- [ ]`を含むsentinelをsteering lintのC3が検出し、下記8-Bの前提である「最終ゲートが1回で緑になる」が崩れる。fixtureは複製とともに捨て、**持ち帰るのは観察結果だけ**である(下記8-B手順4)。
-
-### Stop確認用sentinel tasklistの形
-
-Stopフックは**着手済み(完了`[x]`が1件以上)かつ未完了(`[ ]`)が残っている**tasklistでのみblockする。完了ゼロの未着手tasklistは計画承認ゲート/作業前とみなしてfail-openするため、未完了だけのfixtureではblockを観察できない。sentinelは次の2行を最小形とする。
+1. 対象commitを`/private/tmp`配下へclean cloneする
+2. clone開始時点で未コミット変更がないことを確認する
+3. 既存ステアリングより辞書順で後になる確認専用の日付付きsteeringを人が作る
+4. requirements.mdへ検証用Issue URLを記載し、design.mdを置く
+5. tasklist.mdを次の状態で作る
+6. `python3 scripts/steering_lint.py`が通常検査で成功することを確認する
+7. `docs/procedures/templates/harness-acceptance-record.md`の記録項目を確認する。fixture内へ記録ファイルは作らない
+8. ハーネス名、バージョン、IDE / CLI、設定・承認ポリシー、対象commitを、clone外の一時メモへ記録する
 
 ```markdown
 # タスクリスト
-- [x] Stop smoke 着手マーカー（人が事前に付ける。Stop契約の「着手済み」条件を満たすため）
-- [ ] Stop smoke sentinel（agentは完了・更新しない。最初のblock後に人が中断する）
+
+## 作業状態
+
+- **状態**: active
+- **状態更新日時**: {現在のタイムゾーン付きISO 8601}
+- **使用ハーネス**: {対象ハーネス}
+
+## 確認タスク
+
+- [x] fixture準備
+- [ ] 応答終了を妨げない未完了タスク
+
+## 実装後の振り返り
+
+{通常検査ではactiveのためプレースホルダーを許容}
 ```
 
-着手マーカーは人が最初から `[x]` で置く。agentに1件目を完了させて着手済み状態を作らせない(製品ファイルへ変更が波及しうるため)。
+fixtureは使い捨て複製の中だけに作る。agentへfixtureを完了・更新させず、読み取り確認だけを依頼する。
+実施時点の未コミット変更はこの意図したfixtureだけであることを確認し、その他の変更があれば受け入れを止める。
 
-未着手fail-openそのものを観察したい場合は、着手マーカー行を外した未完了1行だけのfixtureを別ケースとして用意し、**blockが起きないこと**を期待結果とする。
+観察中はclone外の一時メモへ記録し、終了後に**元リポジトリ側**の`.steering/[日付]-[タスク名]/acceptance-record.md`へテンプレート形式で転記する。fixture内の記録を正式証跡にせず、clone破棄前に転記漏れがないことを確認する。
+
+## 共通の状態・lint確認
+
+対話型ハーネス確認の前後で、人が次を実行して結果を記録する。
+
+1. activeかつ未完了のfixtureで通常lintがexit 0
+2. 同じfixtureを完了対象にするとG1だけでexit 1
+3. `steering_state.py pause`でpausedと中断記録を生成
+4. pausedの通常lintがexit 0
+5. `steering_state.py resume`でactiveへ戻る
+6. fixture内の全チェックと振り返りを人が完了
+7. `steering_state.py complete`でcompleteへ遷移
+8. `steering_lint.py --require-complete`がexit 0
+
+この操作は製品リポジトリではなく使い捨てfixtureに限定する。
 
 ## Claude Code
 
-1. 複製環境をClaude Code IDEまたは対話型CLIで開く
-2. `AGENTS.md`と`CLAUDE.md`、主要スキルが表示されることを確認する
-3. 現行版では`/agents`一覧wizardを前提にせず、`@`候補で必要なsubagentsが表示されるか、名前を明示した対話型依頼で実起動できることを確認する
-4. 指定した安全なファイルを読ませ、内容に基づく確認文字列を回答させる
-5. 読み取り、書き込み、shellを別々に依頼して承認境界を観察する
-6. 着手済みかつ未完了のsentinel tasklistに対するStopフックのblockまたはfeedbackを確認する
-7. 最初のblockまたは自動継続を観察した直後に`Ctrl+C`で中断し、agentにsentinelを完了・更新させない
+1. clean cloneをClaude Code IDEまたは対話型CLIで開く
+2. `AGENTS.md`、`CLAUDE.md`、主要スキルが表示されることを確認する
+3. `@`候補または名前を明示した依頼で必要なsubagentを実起動できることを確認する
+4. fixture tasklistを読み、状態・先頭の未完了タスク・再開位置候補だけを回答するよう依頼する
+5. agentがfixtureを変更せず、未完了が残ったまま応答を正常終了することを確認する
+6. read、write、shellを別々に依頼し、承認境界を観察する
+7. PostToolUseリマインドは非強制であり、Stop blockが登録されていないことを設定表示と照合する
 8. 実結果と証跡を記録する
 
 ## Codex
 
-1. 複製環境をCodex IDEまたは対話型CLIで開く
-2. `AGENTS.md`と`.agents/skills/`、必要なagentsが表示されることを確認する
-3. `.codex/hooks.json`のtrust確認が必要なら対話画面で承認する
-4. 指定した安全なファイルの実読込を確認する
-5. 読み取り、書き込み、shellを別々に依頼してsandbox / approvalを観察する
-6. 着手済みかつ未完了のsentinel tasklistに対するStopフックのblockまたはfeedbackを確認する
-7. feedback表示または最初の自動継続を観察した直後に`Ctrl+C`で中断し、agentにsentinelを完了・更新させない
-8. 実結果と証跡を記録する
+1. clean cloneをCodex IDEまたは対話型CLIで開く
+2. `AGENTS.md`、`.agents/skills/`、必要なagentsが表示されることを確認する
+3. fixture tasklistを読み、状態・先頭の未完了タスク・再開位置候補だけを回答するよう依頼する
+4. agentがfixtureを変更せず、未完了が残ったまま応答を正常終了することを確認する
+5. `.codex/hooks.json`がなく、Stop hookのtrust確認やfeedbackが発生しないことを観察する
+6. read、write、shellを別々に依頼し、sandbox / approvalを観察する
+7. 実結果と証跡を記録する
 
 ## Kiro IDE
 
-1. 複製環境をKiro IDEで開く
-2. Agent Steering & Skillsに5 skills、Agent selectorに2 agentsが表示されることを確認する
-3. `/steering`を選択し、SKILL.mdの実読込を確認する
-4. 指定ファイルの実読込とread / write / shellの承認UIを個別に確認する
-5. IDEのStop triggerはblock不可であることを記録する
-6. steering lintとローカル品質ゲートが未完了tasklistを検出する代替経路を確認する(lintのC3は着手有無によらず未完了を検出する)
+1. clean cloneをKiro IDEで開く
+2. Agent Steering & SkillsとAgent selectorに必要な項目が表示されることを確認する
+3. steeringスキルの実読込を確認する
+4. fixture tasklistを読むだけの依頼が変更なしで正常終了することを確認する
+5. read / write / shellの承認UIを個別に確認する
+6. 状態操作と通常/完了lintの結果を共通確認と照合する
 7. 実結果と証跡を記録する
 
 ## Kiro CLI
 
 1. agent validate後、`kiro-cli --agent sdd`で対話型起動する
-2. `/context`で`AGENTS.md`と5 skillsが各1回だけ表示されることを確認する
-3. 指定ファイルの実読込を確認する
-4. read事前許可とwrite / shellの承認UIを個別に確認する
-5. 人が固定した着手済みかつ未完了のsentinel tasklistに対してStopフックがstdout block decisionを返すことを確認する。reasonがUIに出ずモデルの自動継続だけが見える場合は、状態カウンタの増加を補助証跡にする
-6. 最初の自動継続を確認した時点で、write要求を拒否して`Ctrl+C`で中断する。連続ブロックガードを実機で最後まで消費させない
-7. 入力異常・状態破損のfail-openはpytest結果と照合する
-8. 実結果と証跡を記録する
+2. `/context`で`AGENTS.md`とskillsが重複せず表示されることを確認する
+3. fixture tasklistを読むだけの依頼が変更なしで正常終了することを確認する
+4. `.kiro/agents/sdd.json`にstop hookがなく、自動継続やblock decisionが発生しないことを観察する
+5. read事前許可とwrite / shellの承認UIを個別に確認する
+6. 状態操作と通常/完了lintの結果を共通確認と照合する
+7. 実結果と証跡を記録する
 
 ## 判定
 
 - **合格**: 必須項目が期待どおりで、禁止headless modeを起動していない
-- **不合格**: 期待結果と異なる、意図しない変更・権限・起動がある
-- **保留**: 製品バージョン差、権限不足、利用不能により観察できない
-- **対象外**: その実行面が能力を提供しない。能力差と代替経路を記録する
+- **不合格**: 期待結果との差異、意図しない変更・権限・自動継続がある
+- **保留**: 環境・権限・製品バージョン差で観察できない
+- **対象外**: 実行面が対象能力を提供しない。代替経路を記録する
 
 未観察を推測で合格にしない。保留・対象外には理由と再確認条件または代替経路を記録する。
 

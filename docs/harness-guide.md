@@ -21,7 +21,7 @@ SDDプロセスの正典はハーネス中立の `AGENTS.md` にあり、各AI�
 | Codex CLI | `.codex/` + `.agents/skills/`(詳細は `.codex/README.md`) | チャットで「add-featureを実行して」等。初回にプロジェクトのtrustが必要 |
 | Kiro IDE / CLI | `.kiro/`(詳細は `.kiro/README.md`) | IDEはskills / agents、CLIは`kiro-cli --agent sdd`を使用 |
 
-3ハーネスは同じ正典、手順書、`.steering/`成果物、ローカル品質ゲートを共有します。Stop能力の差は各アダプタへ閉じ込めます。
+3ハーネスは同じ正典・手順書・状態遷移CLI・通常／完了lintを共有し、`.steering/`成果物を相互運用できます。Stopフックは使わず、通常の応答終了を妨げません。
 
 ### 品質保証
 
@@ -31,7 +31,7 @@ PR前の必須入口は次です。
 uv run python3 scripts/local_quality_gate.py
 ```
 
-GitHub Actionsは`workflow_dispatch`だけの任意ミラーで、PRやpushでは自動起動しません。LLMのUI・権限・Stop挙動は`docs/procedures/harness-acceptance.md`に従い、対話型IDE / CLIで確認します。標準受け入れに従量課金型headless modeを使いません。
+GitHub Actionsは`workflow_dispatch`だけの任意ミラーで、PRやpushでは自動起動しません。LLMのUI・権限・応答終了非ブロックは`docs/procedures/harness-acceptance.md`に従い、対話型IDE / CLIで確認します。標準受け入れに従量課金型headless modeを使いません。
 
 ## 前提条件
 

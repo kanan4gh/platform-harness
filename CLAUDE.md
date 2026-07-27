@@ -39,5 +39,6 @@ MCP サーバーは LLM の「ツール層」として、外部システムへ�
 
 以下はプロンプトではなく機構で強制される(詳細は `.claude/README.md`):
 
-- **フック**: tasklist.md の未完了タスク残存でセッション終了をブロック(Stopフック)、実装編集が続いた際のtasklist更新リマインド(PostToolUseフック)
+- **フック**: Stopフックは使わず、実装編集が続いた際のtasklist更新リマインド(PostToolUseフック)だけを非強制で使う
+- **状態遷移**: 明示的な中断・再開・完了は`python3 scripts/steering_state.py pause / resume / complete`で記録する
 - **パーミッション**: 読み取り・検証系のみ自動、書き込み系は都度確認(settings.json)

@@ -106,6 +106,29 @@ def test_command_list_has_no_llm_github_or_network_commands() -> None:
     assert all("http://" not in token and "https://" not in token for token in executables)
 
 
+def test_command_list_runs_completion_steering_lint_once() -> None:
+    steering_commands = [
+        command
+        for command in gate.COMMANDS
+        if "scripts/steering_lint.py" in command.argv
+    ]
+    assert len(steering_commands) == 1
+    assert steering_commands[0].argv[-1] == "--require-complete"
+
+
+def test_commands_for_appends_explicit_completion_target_once() -> None:
+    commands = gate.commands_for("20260728-explicit")
+    steering_commands = [
+        command for command in commands if "scripts/steering_lint.py" in command.argv
+    ]
+    assert len(steering_commands) == 1
+    assert steering_commands[0].argv[-2:] == (
+        "--require-complete",
+        "20260728-explicit",
+    )
+    assert len(commands) == len(gate.COMMANDS)
+
+
 def test_main_rejects_too_many_arguments(capsys: pytest.CaptureFixture[str]) -> None:
     assert gate.main(["one", "two"]) == 2
     assert "usage:" in capsys.readouterr().err
