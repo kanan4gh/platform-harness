@@ -46,18 +46,19 @@ def now_iso() -> str:
 def resolve_tasklist(project_root: Path, steering: str | None) -> Path:
     """明示対象または最新の日付付きtasklistを返す。"""
     if steering is None:
-        latest = find_latest_tasklist(project_root)
-        if latest is None:
+        candidate = find_latest_tasklist(project_root)
+        if candidate is None:
             raise TransitionError("対象のtasklist.mdがありません")
-        return latest
-
-    candidate = Path(steering)
-    if candidate.is_absolute():
-        resolved = candidate.resolve()
-    elif len(candidate.parts) == 1:
-        resolved = (project_root / ".steering" / candidate).resolve()
     else:
-        resolved = (project_root / candidate).resolve()
+        requested = Path(steering)
+        if requested.is_absolute():
+            candidate = requested
+        elif len(requested.parts) == 1:
+            candidate = project_root / ".steering" / requested
+        else:
+            candidate = project_root / requested
+
+    resolved = candidate.resolve()
     steering_root = (project_root / ".steering").resolve()
     if resolved.is_dir():
         resolved = resolved / "tasklist.md"
