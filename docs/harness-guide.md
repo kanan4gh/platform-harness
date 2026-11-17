@@ -11,6 +11,8 @@
 - **ローカル品質ゲート**: GitHub ActionsやLLM headless modeへ依存せず、全員が同じ検証を1コマンド実行可能
 - **AWS認証**: `~/.aws/` バインドマウントによる AWS Profile 認証
 
+本書の正典は [platform-harness](https://github.com/kanan4gh/platform-harness) で開発・リリースし、生成済み配布物だけを [platform-harness-template](https://github.com/kanan4gh/platform-harness-template) へ公開します。正典の構想・履歴・派生台帳は配布物へ含めません。
+
 SDDプロセスの正典はハーネス中立の `AGENTS.md` にあり、各AIコーディングエージェント(ハーネス)固有の運用差分はアダプタが定義します(換装の構想と経緯は `docs/ideas/harness-swap.md` を参照)。
 
 ### ハーネスの選択
@@ -43,7 +45,7 @@ GitHub Actionsは`workflow_dispatch`だけの任意ミラーで、PRやpushで�
 
 ### 1. テンプレートからリポジトリを作成
 
-GitHub の「Use this template」ボタンから新しいリポジトリを作成します。
+[platform-harness-template](https://github.com/kanan4gh/platform-harness-template) の「Use this template」ボタンから新しいリポジトリを作成します。正典への変更提案や不具合報告は [platform-harness](https://github.com/kanan4gh/platform-harness) で行います。
 
 ### 2. AWS設定をカスタマイズ
 
