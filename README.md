@@ -1,20 +1,24 @@
-# Your Project Name
+# platform-harness
 
-> プロジェクトの概要を1〜2文で書いてください。
+AIコーディングエージェントと協働するスペック駆動開発(SDD)ハーネスの中立な正典です。Claude Code、Codex、Kiro向けアダプタ、共通手順、ローカル品質ゲートを開発・リリースします。
 
-## 概要
+## 正典と配布の境界
 
-（プロジェクトの説明をここに書いてください）
+- このrepositoryは正典の開発、Issue・PR、releaseを管理します。
+- 新規プロジェクト向けの生成済み成果物は [platform-harness-template](https://github.com/kanan4gh/platform-harness-template) へ公開します。
+- 配布物はrelease tagからexact allowlistで生成し、正典のsteering履歴、ideas、派生台帳、配布管理資産を含めません。
+- 公開・更新・ロールバックは [`docs/procedures/template-distribution.md`](docs/procedures/template-distribution.md) に従います。
 
-## セットアップ
+## 開発
 
-（セットアップ手順をここに書いてください）
+通常の変更はGitHub Issueとフィーチャーブランチを作り、`add-feature`と`steering`の手順で実装します。PR前の必須ゲートは次です。
 
-## 使い方
+```bash
+uv run python3 scripts/local_quality_gate.py --steering <YYYYMMDD-task-name>
+```
 
-（使い方をここに書いてください）
+GitHub Actions自動runや従量課金LLM headless modeを標準検証に使いません。
 
----
+## 利用者向けガイド
 
-このリポジトリは [platform-harness](https://github.com/kanan4gh/platform-harness) テンプレートから作成されました。
-テンプレートのセットアップ手順は [`docs/harness-guide.md`](docs/harness-guide.md) を参照してください。
+生成済みテンプレートのセットアップと使い方は [`docs/harness-guide.md`](docs/harness-guide.md) を参照してください。
