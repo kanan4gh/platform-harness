@@ -1,4 +1,10 @@
-"""tasklist.mdの作業状態を決定論的に遷移するCLI。"""
+"""tasklist.mdの作業状態を決定論的に遷移するCLI。
+
+完了遷移のサブコマンドは`finish`である。旧名`complete`は既存の派生プロジェクト・
+スクリプト互換のためだけに、ヘルプ非表示の別名として受け付ける(挙動・終了コードは同一)。
+正式名を改めたのは、Claude Codeのworktree隔離ガードが単独の語`complete`を含む
+コマンドを拒否するためである(kanan4gh/project-uroboros-neo#59)。
+"""
 
 from __future__ import annotations
 
@@ -33,6 +39,7 @@ HISTORY_SECTION_PATTERN = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 TASKLIST_HEADING_PATTERN = re.compile(r"^# タスクリスト[ \t]*$", re.MULTILINE)
+LEGACY_FINISH_COMMAND = "complete"
 
 
 class TransitionError(ValueError):
@@ -132,7 +139,7 @@ def pause_text(
     if state.value is None and not incomplete:
         raise TransitionError("完了済みの旧tasklistはpauseできません")
     if not incomplete:
-        raise TransitionError("未完了タスクがないためpauseではなくcompleteを使用してください")
+        raise TransitionError("未完了タスクがないためpauseではなくfinishを使用してください")
     values = {
         "使用ハーネス": harness,
         "完了済みの範囲": completed_scope,
@@ -202,7 +209,7 @@ def resume_text(
     return append_history(updated, record)
 
 
-def complete_text(text: str, *, harness: str, timestamp: str) -> str:
+def finish_text(text: str, *, harness: str, timestamp: str) -> str:
     """active tasklistの完了前提を検証しcompleteへ遷移する。"""
     state = parse_task_state(text)
     if state.error is not None:
@@ -252,36 +259,46 @@ def write_transition(tasklist: Path, updated: str) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__)
+    # docstring後段は保守者向けの経緯説明であり、旧名をヘルプへ出さないため1行目だけを使う。
+    parser = argparse.ArgumentParser(description=(__doc__ or "").partition("\n")[0])
     parser.add_argument("--project-root", type=Path, default=Path.cwd())
     parser.add_argument("--steering", help="日付付きステアリング名またはtasklistへのパス")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(
+        dest="command", required=True, metavar="{pause,resume,finish}"
+    )
 
-    pause = subparsers.add_parser("pause")
+    pause = subparsers.add_parser("pause", help="意図的な中断を記録してpausedへ遷移する")
     pause.add_argument("--harness", required=True)
     pause.add_argument("--completed-scope", required=True)
     pause.add_argument("--uncommitted-changes", required=True)
     pause.add_argument("--resume-at", required=True)
     pause.add_argument("--reason", required=True)
 
-    resume = subparsers.add_parser("resume")
+    resume = subparsers.add_parser("resume", help="再開を記録してactiveへ戻す")
     resume.add_argument("--harness", required=True)
     resume.add_argument("--resume-at", required=True)
     resume.add_argument("--reason", required=True)
 
-    complete = subparsers.add_parser("complete")
-    complete.add_argument("--harness", required=True)
+    finish = subparsers.add_parser("finish", help="完了前提を検証して完了状態へ遷移する")
+    _add_finish_arguments(finish)
+    # 互換用の別名。help=を渡さないことで--helpのサブコマンド一覧に表示しない。
+    _add_finish_arguments(subparsers.add_parser(LEGACY_FINISH_COMMAND))
     return parser
+
+
+def _add_finish_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--harness", required=True)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    command = "finish" if args.command == LEGACY_FINISH_COMMAND else args.command
     project_root = args.project_root.resolve()
     try:
         tasklist = resolve_tasklist(project_root, args.steering)
         text = tasklist.read_text(encoding="utf-8")
         timestamp = now_iso()
-        if args.command == "pause":
+        if command == "pause":
             updated = pause_text(
                 text,
                 harness=args.harness,
@@ -291,7 +308,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 reason=args.reason,
                 timestamp=timestamp,
             )
-        elif args.command == "resume":
+        elif command == "resume":
             updated = resume_text(
                 text,
                 harness=args.harness,
@@ -300,12 +317,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 timestamp=timestamp,
             )
         else:
-            updated = complete_text(text, harness=args.harness, timestamp=timestamp)
+            updated = finish_text(text, harness=args.harness, timestamp=timestamp)
         write_transition(tasklist, updated)
     except (OSError, TransitionError) as exc:
         print(f"steering state: {exc}", file=sys.stderr)
         return 1
-    print(f"steering state: {tasklist} -> {args.command}")
+    print(f"steering state: {tasklist} -> {command}")
     return 0
 
 

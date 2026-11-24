@@ -59,7 +59,7 @@ def test_acceptance_exercises_full_state_lifecycle_and_profiles() -> None:
             "steering_state.py pause",
             "pausedの通常lint",
             "steering_state.py resume",
-            "steering_state.py complete",
+            "steering_state.py finish",
             "steering_lint.py --require-complete",
         ),
     )

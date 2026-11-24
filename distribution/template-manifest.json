@@ -97,6 +97,7 @@
     "tests/lint/test_worktree_scan_exclusion.py",
     "tests/procedures/test_add_feature_ordering.py",
     "tests/procedures/test_distill_procedure.py",
+    "tests/procedures/test_guard_forbidden_words.py",
     "tests/procedures/test_lightweight_path_criteria.py",
     "tests/scripts/test_check_pr_file_overlap.py",
     "tests/scripts/test_local_quality_gate.py",

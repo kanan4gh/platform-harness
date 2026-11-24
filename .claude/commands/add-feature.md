@@ -206,7 +206,7 @@ mainの作業ツリーを汚さないための機構的な担保。**このス�
   - 計画と実績の差分
   - 学んだこと
   - 次回への改善提案
-5. 振り返りとドキュメント更新フェーズの全チェックを`[x]`にし、`Bash('python3 scripts/steering_state.py complete --harness \"Claude Code\"')`で状態を`complete`へ変更する。失敗した場合は未完了・振り返り・プレースホルダーを修正して再実行する。
+5. 振り返りとドキュメント更新フェーズの全チェックを`[x]`にし、`Bash('python3 scripts/steering_state.py finish --harness \"Claude Code\"')`で状態を`complete`へ変更する。失敗した場合は未完了・振り返り・プレースホルダーを修正して再実行する。
 
 **このステップの完了時点で、`tasklist.md` の全チェックボックスが`[x]`、状態が`complete`になる。**
 

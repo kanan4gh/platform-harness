@@ -38,7 +38,7 @@ CodexはStopフックを使いません。未完了の`active`作業があって
 
 - 意図的中断: `python3 scripts/steering_state.py pause ...`
 - 再開: `python3 scripts/steering_state.py resume ...`
-- 完了: `python3 scripts/steering_state.py complete --harness Codex`
+- 完了: `python3 scripts/steering_state.py finish --harness Codex`
 - 通常診断: `python3 scripts/steering_lint.py`
 - PR前: `uv run python3 scripts/local_quality_gate.py`
 

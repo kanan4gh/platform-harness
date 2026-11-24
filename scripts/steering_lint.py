@@ -296,7 +296,7 @@ def check_task_state(
             Violation(
                 steering_dir.name,
                 "C3",
-                "状態がpausedですが未完了タスクがありません。completeへ遷移してください",
+                "状態がpausedですが未完了タスクがありません。resumeでactiveへ戻してからfinishを実行してください",
             )
         ]
     return []

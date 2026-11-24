@@ -46,7 +46,7 @@ Codexのように中立化が原理的に不可能な項目は、**代替の決�
 | 観点 | 検証方法 |
 |---|---|
 | ファイル存在、JSON / Markdown構造 | pytest |
-| 状態解析、pause / resume / complete、通常/完了lint | pytestと実スクリプト |
+| 状態解析、pause / resume / finish、通常/完了lint | pytestと実スクリプト |
 | Stopフック登録・実装の不在 | pytest |
 | 禁止headlessシグネチャの不在 | metered automation lint |
 | スキル・エージェントの表示と実読込 | 対話型実機確認 |
@@ -98,7 +98,7 @@ fixtureは使い捨て複製の中だけに作る。agentへfixtureを完了・�
 4. pausedの通常lintがexit 0
 5. `steering_state.py resume`でactiveへ戻る
 6. fixture内の全チェックと振り返りを人が完了
-7. `steering_state.py complete`でcompleteへ遷移
+7. `steering_state.py finish`でcompleteへ遷移
 8. `steering_lint.py --require-complete`がexit 0
 
 この操作は製品リポジトリではなく使い捨てfixtureに限定する。

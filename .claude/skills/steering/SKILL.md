@@ -12,6 +12,6 @@ allowed-tools: Read, Write, Edit, Bash
 
 - Stopフックは使用しない。通常の応答終了は作業状態を変更しない
 - `.claude/hooks/remind_tasklist_update.py`のPostToolUseフックは、実装ファイルの編集が続いた場合にtasklist更新を非強制で促す
-- 明示的な中断・再開・完了では`python3 scripts/steering_state.py pause / resume / complete`を使う
+- 明示的な中断・再開・完了では`python3 scripts/steering_state.py pause / resume / finish`を使う
 - 手順書の「ハーネス内部のタスク管理機能」はTodoWriteを指す(補助であり、正はtasklist.md)
 - tasklist.mdの更新はEditツールでリアルタイムに行う

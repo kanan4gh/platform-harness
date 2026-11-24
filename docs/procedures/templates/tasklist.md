@@ -65,7 +65,7 @@ _記録なし_
 - [ ] 実装後の振り返りを記録
 - [ ] 全テスト通過、lintエラーなし、リリース判断を記録
 
-> 上の全チェック完了後、`python3 scripts/steering_state.py complete --harness {ハーネス}`で`complete`へ遷移する。その後、add-featureステップ8で最終品質ゲートを1回実行する。ゲート失敗時は`resume`で`active`へ戻し、修正・再検証・振り返り更新・`complete`遷移をやり直す。
+> 上の全チェック完了後、`python3 scripts/steering_state.py finish --harness {ハーネス}`で`complete`へ遷移する。その後、add-featureステップ8で最終品質ゲートを1回実行する。ゲート失敗時は`resume`で`active`へ戻し、修正・再検証・振り返り更新・`complete`遷移をやり直す。
 
 ---
 

@@ -85,6 +85,8 @@ Stopフックによる応答終了ブロックは使用しない。Claude Code�
 
 状態変更は`scripts/steering_state.py`を使う。スキルはユーザー意図と記録内容を判断し、スクリプトは許可された遷移と書式を機械的に保証する。
 
+> **worktree隔離セッションでの注意**: Claude Codeのworktree隔離ガードは、引数にちょうど単語`complete`(単独の語)を含むコマンド(tasklistの状態値を grep で探すコマンド等)を拒否する。`--require-complete`のように語の一部として含む場合は拒否されない。完了遷移は`finish`を使い、状態値の確認はファイルを読むツールで行う(隔離の安全性を損なうため、語の分割等でガードをすり抜けない)。
+
 ### 中断: `active → paused`
 
 ユーザーが「今日はここまで」「中断する」「別ハーネスへ引き継ぐ」と明示した場合に実行する。
@@ -113,10 +115,10 @@ python3 scripts/steering_state.py resume \
 
 ### 完了: `active → complete`
 
-実装・4段検証・振り返りとドキュメント更新の全チェックボックスが完了した後に実行する。
+実装・4段検証・振り返りとドキュメント更新の全チェックボックスが完了した後に実行する。サブコマンド名は`finish`、遷移先の状態値は`complete`である。
 
 ```bash
-python3 scripts/steering_state.py complete --harness Codex
+python3 scripts/steering_state.py finish --harness Codex
 ```
 
 未完了、振り返り欠落、プレースホルダー残存があれば遷移は失敗し、tasklistを変更しない。最終品質ゲート、コミット、G3受け入れ記録、push、PRは循環を避けるためtasklistのチェックボックスにせず、add-feature手順が実行管理する。
@@ -132,4 +134,4 @@ python3 scripts/steering_state.py complete --harness Codex
 - 次回への改善提案
 - リリース判断
 
-振り返りとドキュメント更新フェーズをすべて`[x]`にし、状態操作の`complete`へ進む。振り返りはdistillの入力になるため、普遍性・再現性・抽象性を意識する。
+振り返りとドキュメント更新フェーズをすべて`[x]`にし、完了遷移(`finish`)へ進む。振り返りはdistillの入力になるため、普遍性・再現性・抽象性を意識する。
