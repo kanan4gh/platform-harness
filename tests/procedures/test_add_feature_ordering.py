@@ -114,7 +114,7 @@ def test_step7_consumes_the_retrospective_and_docs_phase() -> None:
         step7 = step_section(path, "7")
         assert "このステップが消化するのは振り返りとドキュメント更新フェーズのチェックボックスである" in step7
         assert "全チェックボックスが`[x]`" in step7
-        assert "steering_state.py complete" in step7
+        assert "steering_state.py finish" in step7
         assert "状態が`complete`" in step7
 
 
@@ -229,9 +229,9 @@ def test_template_keeps_procedural_actions_out_of_checkboxes() -> None:
     text = TEMPLATE.read_text(encoding="utf-8")
     checkbox_lines = [line for line in text.splitlines() if "- [ ]" in line]
     assert checkbox_lines, "テンプレートにチェックボックスが必要"
-    for procedural_action in ("steering_state.py complete", "最終品質ゲート", "コミット", "PR作成"):
+    for procedural_action in ("steering_state.py finish", "最終品質ゲート", "コミット", "PR作成"):
         assert all(procedural_action not in line for line in checkbox_lines)
-    assert "steering_state.py complete" in text
+    assert "steering_state.py finish" in text
     assert "最終品質ゲートを1回実行" in text
 
 

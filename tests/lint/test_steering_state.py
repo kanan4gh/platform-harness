@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import re
 import subprocess
 import sys
 from types import ModuleType
@@ -158,8 +159,8 @@ def test_resume_rejects_incomplete_pause_record() -> None:
         )
 
 
-def test_complete_changes_valid_active_tasklist() -> None:
-    updated = state_mod.complete_text(
+def test_finish_changes_valid_active_tasklist() -> None:
+    updated = state_mod.finish_text(
         tasklist("active", "- [x] done"),
         harness="Codex",
         timestamp=TIMESTAMP,
@@ -167,25 +168,25 @@ def test_complete_changes_valid_active_tasklist() -> None:
     assert "- **状態**: complete" in updated
 
 
-def test_complete_rejects_incomplete_task_without_modifying_source() -> None:
+def test_finish_rejects_incomplete_task_without_modifying_source() -> None:
     original = tasklist("active", "- [x] done\n- [ ] next")
     with pytest.raises(state_mod.TransitionError):
-        state_mod.complete_text(original, harness="Codex", timestamp=TIMESTAMP)
+        state_mod.finish_text(original, harness="Codex", timestamp=TIMESTAMP)
     assert "- **状態**: active" in original
 
 
-def test_complete_rejects_retrospective_placeholder() -> None:
+def test_finish_rejects_retrospective_placeholder() -> None:
     text = tasklist(
         "active",
         "- [x] done",
         retrospective="## 実装後の振り返り\n\n{YYYY-MM-DD}\n",
     )
     with pytest.raises(state_mod.TransitionError):
-        state_mod.complete_text(text, harness="Codex", timestamp=TIMESTAMP)
+        state_mod.finish_text(text, harness="Codex", timestamp=TIMESTAMP)
 
 
-def test_complete_allows_retrospective_code_spans() -> None:
-    """Issue #55の実症状。コード片を引用したままcompleteへ遷移できる。"""
+def test_finish_allows_retrospective_code_spans() -> None:
+    """Issue #55の実症状。コード片を引用したまま完了状態へ遷移できる。"""
     retrospective = (
         "## 実装後の振り返り\n\n### 学んだこと\n\n"
         "- storage_factory のキーをフルパス、ファイルを `{parent}_{name}` "
@@ -194,7 +195,7 @@ def test_complete_allows_retrospective_code_spans() -> None:
         'd = {"key": 1}\n'
         "```\n"
     )
-    updated = state_mod.complete_text(
+    updated = state_mod.finish_text(
         tasklist("active", "- [x] done", retrospective=retrospective),
         harness="Claude Code",
         timestamp=TIMESTAMP,
@@ -202,7 +203,7 @@ def test_complete_allows_retrospective_code_spans() -> None:
     assert "- **状態**: complete" in updated
 
 
-def test_complete_rejects_bare_placeholder_beside_inline_code() -> None:
+def test_finish_rejects_bare_placeholder_beside_inline_code() -> None:
     """インラインコードの外に残った裸のプレースホルダは従来どおり拒否する。"""
     text = tasklist(
         "active",
@@ -213,20 +214,20 @@ def test_complete_rejects_bare_placeholder_beside_inline_code() -> None:
         ),
     )
     with pytest.raises(state_mod.TransitionError, match=r"\{YYYY-MM-DD\}"):
-        state_mod.complete_text(text, harness="Claude Code", timestamp=TIMESTAMP)
+        state_mod.finish_text(text, harness="Claude Code", timestamp=TIMESTAMP)
 
 
-def test_complete_rejects_empty_retrospective() -> None:
+def test_finish_rejects_empty_retrospective() -> None:
     text = tasklist(
         "active",
         "- [x] done",
         retrospective="## 実装後の振り返り\n\n### 実装完了日\n",
     )
     with pytest.raises(state_mod.TransitionError, match="未記入"):
-        state_mod.complete_text(text, harness="Codex", timestamp=TIMESTAMP)
+        state_mod.finish_text(text, harness="Codex", timestamp=TIMESTAMP)
 
 
-def test_complete_rejects_duplicate_state_sections_without_modifying_source() -> None:
+def test_finish_rejects_duplicate_state_sections_without_modifying_source() -> None:
     original = tasklist("active", "- [x] done")
     duplicate = (
         "\n## 作業状態\n\n"
@@ -236,7 +237,7 @@ def test_complete_rejects_duplicate_state_sections_without_modifying_source() ->
     )
     text = original + duplicate
     with pytest.raises(state_mod.TransitionError, match="複数"):
-        state_mod.complete_text(text, harness="Codex", timestamp=TIMESTAMP)
+        state_mod.finish_text(text, harness="Codex", timestamp=TIMESTAMP)
     assert text == original + duplicate
 
 
@@ -334,7 +335,7 @@ def test_cli_error_does_not_modify_tasklist(tmp_path: Path) -> None:
             str(SCRIPT_PATH),
             "--project-root",
             str(tmp_path),
-            "complete",
+            "finish",
             "--harness",
             "Codex",
         ],
@@ -345,6 +346,57 @@ def test_cli_error_does_not_modify_tasklist(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "未完了タスク" in result.stderr
     assert target.read_text(encoding="utf-8") == original
+
+
+# 互換用の旧サブコマンド名。手順書には書かず、既存の派生プロジェクト・スクリプトのためだけに受け付ける。
+LEGACY_FINISH = state_mod.LEGACY_FINISH_COMMAND
+
+
+def run_state_cli(project_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(SCRIPT_PATH), "--project-root", str(project_root), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def without_timestamps(text: str) -> str:
+    return "\n".join(line for line in text.splitlines() if "状態更新日時" not in line)
+
+
+@pytest.mark.parametrize("tasks", ["- [x] done", "- [x] done\n- [ ] next"])
+def test_legacy_finish_alias_matches_finish(tmp_path: Path, tasks: str) -> None:
+    """旧名の別名はfinishと同じ終了コード・出力・tasklist結果になる(成功時と失敗時)。"""
+    outcomes: list[tuple[int, str, str, str]] = []
+    for command in ("finish", LEGACY_FINISH):
+        root = tmp_path / command
+        steering = make_project(root)
+        target = steering / "tasklist.md"
+        target.write_text(tasklist("active", tasks), encoding="utf-8")
+        result = run_state_cli(root, command, "--harness", "Claude Code")
+        outcomes.append(
+            (
+                result.returncode,
+                result.stdout.replace(str(root), "<root>"),
+                result.stderr.replace(str(root), "<root>"),
+                without_timestamps(target.read_text(encoding="utf-8")),
+            )
+        )
+    assert outcomes[0] == outcomes[1]
+    if "[ ]" not in tasks:
+        assert outcomes[0][0] == 0
+        assert outcomes[0][1].rstrip().endswith("-> finish")
+        assert "- **状態**: complete" in outcomes[0][3]
+    else:
+        assert outcomes[0][0] == 1
+
+
+def test_help_lists_finish_but_hides_legacy_alias(tmp_path: Path) -> None:
+    result = run_state_cli(tmp_path, "--help")
+    assert result.returncode == 0
+    assert "finish" in result.stdout
+    assert re.search(rf"(?<![\w-]){LEGACY_FINISH}(?![\w-])", result.stdout) is None
 
 
 def test_write_transition_replace_failure_keeps_original_and_cleans_temporary(
