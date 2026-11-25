@@ -540,6 +540,21 @@ def test_resolve_completion_target_uses_latest_dated_directory(tmp_path: Path) -
     assert lint_mod.resolve_completion_target(tmp_path, "latest") == expected
 
 
+def test_resolve_completion_target_returns_none_without_dated_directories(
+    tmp_path: Path,
+) -> None:
+    make_steering(tmp_path, "example")
+    assert lint_mod.resolve_completion_target(tmp_path, "latest") is None
+
+
+def test_resolve_completion_target_rejects_explicit_target_without_dated_directories(
+    tmp_path: Path,
+) -> None:
+    make_steering(tmp_path, "example")
+    with pytest.raises(ValueError, match="見つかりません"):
+        lint_mod.resolve_completion_target(tmp_path, "20260728-missing")
+
+
 def run_cli(project_root: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(LINT_PATH), str(project_root), *args],
@@ -567,6 +582,46 @@ def test_cli_rejects_unknown_completion_target(tmp_path: Path) -> None:
     result = run_cli(tmp_path, "--require-complete", "20260728-missing")
     assert result.returncode == 2
     assert "見つかりません" in result.stderr
+
+
+ZERO_DATED_SKIP_MESSAGE = "steering lint: 完了検査をスキップしました（日付付きのステアリングが0件）"
+
+
+def test_cli_skips_completion_check_without_dated_directories(tmp_path: Path) -> None:
+    make_steering(
+        tmp_path,
+        "example",
+        requirements="no issue",
+        tasklist_text=tasklist("active", "- [ ] ignored"),
+    )
+    result = run_cli(tmp_path, "--require-complete")
+    assert result.returncode == 0
+    assert result.stdout.splitlines() == [ZERO_DATED_SKIP_MESSAGE]
+    assert result.stderr == ""
+
+
+def test_cli_rejects_explicit_target_without_dated_directories(tmp_path: Path) -> None:
+    make_steering(tmp_path, "example")
+    result = run_cli(tmp_path, "--require-complete", "20260728-missing")
+    assert result.returncode == 2
+    assert "見つかりません" in result.stderr
+    assert "スキップ" not in result.stdout
+
+
+def test_cli_rejects_latest_target_without_steering_root(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "--require-complete")
+    assert result.returncode == 2
+    assert ".steering" in result.stderr
+    assert "スキップ" not in result.stdout
+
+
+def test_cli_normal_profile_does_not_print_skip_without_dated_directories(
+    tmp_path: Path,
+) -> None:
+    make_steering(tmp_path, "example")
+    result = run_cli(tmp_path)
+    assert result.returncode == 0
+    assert result.stdout == ""
 
 
 def test_find_incomplete_tasks_includes_fenced_examples() -> None:
