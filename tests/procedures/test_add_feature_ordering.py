@@ -261,3 +261,152 @@ def test_validator_flags_a_premature_complete_state() -> None:
     text = VALIDATOR.read_text(encoding="utf-8")
     assert "状態が段4より前に`complete`へ変更された痕跡" in text
     assert "乖離として指摘する" in text
+
+
+# --- U3: 段2の代替観察・確認方法・コミット単位・G3範囲・見本(neo#59 / neo#60) ---
+
+HARNESS_ACCEPTANCE = ROOT / "docs" / "procedures" / "harness-acceptance.md"
+REQUIREMENTS_TEMPLATE = ROOT / "docs" / "procedures" / "templates" / "requirements.md"
+TEMPLATES_DIR = ROOT / "docs" / "procedures" / "templates"
+EXAMPLE_DIR = ROOT / ".steering" / "example"
+PR_TEMPLATE = ROOT / ".github" / "pull_request_template.md"
+
+
+def stage2_section(path: Path) -> str:
+    """ステップ6の `### 段2` 見出しから次の `### ` 見出し直前までを切り出す。"""
+    step6 = step_section(path, "6")
+    start = step6.index("### 段2")
+    end = step6.index("### ", start + 1)
+    return step6[start:end]
+
+
+def test_stage2_replaces_skipping_with_alternative_observation() -> None:
+    """検証支援機能がなくても段2をスキップせず、代替観察と未確認の記録で引き渡す。"""
+    for path in workflow_files():
+        stage2 = stage2_section(path)
+        assert "画面のあるアプリ" in stage2
+        assert "観察手段がない場合はスキップしない" in stage2
+        assert "未確認" in stage2
+        assert "人の確認が必要な項目" in stage2
+        assert "段2の行を `[x]` にする条件" in stage2
+        # スキップが許されるのは観察対象がない純ドキュメントだけ
+        skip_lines = [line for line in stage2.splitlines() if "段2をスキップ" in line]
+        assert skip_lines, f"{path.name}: 純ドキュメントのスキップ規定が必要"
+        assert all("純ドキュメント" in line for line in skip_lines)
+
+
+def test_claude_adapter_does_not_depend_on_a_specific_verify_skill() -> None:
+    """特定のビルトインスキルへの依存が、検証漏れ(スキップ)の根本原因だった。"""
+    text = CLAUDE_ADAPTER.read_text(encoding="utf-8")
+    assert "Skill('verify')" not in text
+    assert "`verify` / `code-review`" not in text
+    assert "`Bash` で直接起動" in stage2_section(CLAUDE_ADAPTER)
+
+
+def test_acceptance_criteria_verification_methods_are_planned_without_a_new_gate() -> None:
+    for path in workflow_files():
+        plan = step_section(path, "4")
+        for method in ("自動テスト", "エージェントの実機操作", "人の確認"):
+            assert method in plan, f"{path.name}: 確認方法 {method} が必要"
+        assert "承認後の実行を止めない" in plan or "承認後の実行を止めず" in plan
+        approval = step_section(path, "4.5")
+        assert "受け入れ条件ごとの確認方法" in approval
+        assert "新たな承認ゲートは設けない" in approval
+        step8 = step_section(path, "8")
+        assert "人の確認が必要な項目" in step8
+        assert "マージ前の人の確認で不合格だった場合" in step8
+    template = REQUIREMENTS_TEMPLATE.read_text(encoding="utf-8")
+    assert "(確認方法:" in template
+    assert "## 人の確認が必要な項目" in PR_TEMPLATE.read_text(encoding="utf-8")
+
+
+def test_commit_unit_and_timing_match_between_procedure_and_adapter() -> None:
+    for path in workflow_files():
+        assert "ローカルコミット" in step_section(path, "5")
+        assert "pushはステップ8まで行わない" in step_section(path, "5")
+        step8 = step_section(path, "8")
+        default_branch = step8[
+            step8.index("### ステップ8-A") : step8.index("### ステップ8-B")
+        ]
+        g3_branch = step8[step8.index("### ステップ8-B") :]
+        assert "**未コミットの変更すべて**" in default_branch
+        assert "全変更をコミット" not in step8
+        candidate = g3_branch[g3_branch.index("**候補コミット**") :].splitlines()[0]
+        assert "未コミットの変更すべて" in candidate
+        assert "HEAD" in candidate
+    connection = HARNESS_ACCEPTANCE.read_text(encoding="utf-8")
+    candidate = connection[connection.index("**候補コミット**") :].splitlines()[0]
+    assert "未コミットの変更すべて" in candidate
+
+
+def test_g3_criterion_enumerates_included_and_excluded_settings() -> None:
+    """「ハーネス設定ファイル」の範囲を、含める / 含めないで具体化する。"""
+    for path in workflow_files():
+        plan = step_section(path, "4")
+        assert "G3が観察する対象" in plan
+        # 含める: 権限・フックの設定と、settings側のMCPサーバーの有効化・許可
+        assert ".claude/settings.json" in plan
+        assert "MCPサーバーの有効化・許可" in plan
+        # 含めない: 品質ゲートが検証する開発ツール設定、MCPサーバー定義、サンプル
+        assert "pyproject.toml" in plan
+        assert "`.mcp.json`" in plan
+        assert ".mcp.json.example" in plan
+    neutral_plan = step_section(NEUTRAL, "4")
+    assert "同じ基準" not in neutral_plan
+    rollout = (ROOT / "docs" / "procedures" / "derived-project-rollout.md").read_text(
+        encoding="utf-8"
+    )
+    assert "`add-feature.md`ステップ4の基準" in rollout
+
+
+FULLWIDTH_ANNOTATION = re.compile(r"（.*$")
+PLACEHOLDER = re.compile(r"\{[^{}\n]+\}")
+PHASE_NUMBER = re.compile(r"^フェーズ\d+: ")
+
+
+def heading_stems(text: str) -> list[str]:
+    """`## ` 見出しの語幹。
+
+    フェーズ見出しは番号だけを除き、消化ステップの注記(「（実装フェーズ / ステップ5）」等)を残す
+    (注記まで除くと `{フェーズ名}` が任意の見出しに一致し、フェーズの欠落を検出できない)。
+    それ以外の見出しは全角括弧の説明注記を除く。
+    """
+    stems: list[str] = []
+    for line in text.splitlines():
+        if not line.startswith("## "):
+            continue
+        heading = line[3:].strip()
+        if PHASE_NUMBER.match(heading):
+            stems.append(PHASE_NUMBER.sub("", heading))
+        else:
+            stems.append(FULLWIDTH_ANNOTATION.sub("", heading).strip())
+    return stems
+
+
+def test_example_steering_follows_the_current_templates() -> None:
+    """見本はテンプレートの `##` 見出しを網羅する(実装フェーズの数・名前は自由)。"""
+    for name in ("requirements.md", "design.md", "tasklist.md"):
+        template_stems = heading_stems((TEMPLATES_DIR / name).read_text(encoding="utf-8"))
+        example_text = (EXAMPLE_DIR / name).read_text(encoding="utf-8")
+        example_stems = heading_stems(example_text)
+        for stem in template_stems:
+            pattern = re.compile(
+                "".join(
+                    ".+" if PLACEHOLDER.fullmatch(part) else re.escape(part)
+                    for part in re.split(r"(\{[^{}\n]+\})", stem)
+                    if part
+                )
+            )
+            assert any(pattern.fullmatch(s) for s in example_stems), (
+                f"example/{name} にテンプレートの見出し「{stem}」がない"
+            )
+        assert not PLACEHOLDER.search(example_text), f"example/{name} に未記入のプレースホルダ"
+
+
+def test_example_tasklist_records_the_work_state_in_the_fixed_format() -> None:
+    text = (EXAMPLE_DIR / "tasklist.md").read_text(encoding="utf-8")
+    assert re.search(r"(?m)^- \*\*状態\*\*: (active|paused|complete)$", text)
+    assert re.search(r"(?m)^- \*\*状態更新日時\*\*: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$", text)
+    assert re.search(r"(?m)^- \*\*使用ハーネス\*\*: \S", text)
+    assert "### フェーズとadd-featureステップ" in text
+    assert "未確認" in text
