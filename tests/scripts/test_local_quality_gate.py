@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 from types import ModuleType
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -127,6 +128,68 @@ def test_commands_for_appends_explicit_completion_target_once() -> None:
         "20260728-explicit",
     )
     assert len(commands) == len(gate.COMMANDS)
+
+
+REAL_STEERING_LINT = SCRIPT_PATH.parent / "steering_lint.py"
+
+
+def zero_dated_steering_project(tmp_path: Path) -> Path:
+    """日付付きのステアリングが0件(example/だけ)で、実物のsteering lintを置いた状態。"""
+    root = project_root(tmp_path)
+    (root / "scripts" / "steering_lint.py").write_text(
+        REAL_STEERING_LINT.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    example = root / ".steering" / "example"
+    example.mkdir(parents=True)
+    (example / "tasklist.md").write_text("# タスクリスト\n\n- [ ] 例\n", encoding="utf-8")
+    return root
+
+
+def real_steering_lint_runner(
+    outputs: list[str],
+) -> Callable[..., subprocess.CompletedProcess[bytes]]:
+    """steering lintだけ実物を実行し、他のコマンドは成功を返すrunner。"""
+
+    def runner(
+        argv: tuple[str, ...], *, cwd: Path, check: bool, shell: bool
+    ) -> subprocess.CompletedProcess[bytes]:
+        if "scripts/steering_lint.py" not in argv:
+            return subprocess.CompletedProcess(argv, 0)
+        script_index = argv.index("scripts/steering_lint.py")
+        result = subprocess.run(
+            [sys.executable, *argv[script_index:]],
+            cwd=cwd,
+            check=check,
+            shell=shell,
+            capture_output=True,
+            text=True,
+        )
+        outputs.append(result.stdout + result.stderr)
+        return subprocess.CompletedProcess(argv, result.returncode)
+
+    return runner
+
+
+def test_run_gate_passes_with_real_steering_lint_without_dated_steering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = zero_dated_steering_project(tmp_path)
+    monkeypatch.setattr(gate.shutil, "which", lambda _name: "/usr/bin/uv")
+    outputs: list[str] = []
+    assert gate.run_gate(root, runner=real_steering_lint_runner(outputs)) == 0
+    assert outputs == ["steering lint: 完了検査をスキップしました（日付付きのステアリングが0件）\n"]
+
+
+def test_run_gate_fails_for_missing_explicit_steering_without_dated_steering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = zero_dated_steering_project(tmp_path)
+    monkeypatch.setattr(gate.shutil, "which", lambda _name: "/usr/bin/uv")
+    outputs: list[str] = []
+    commands = gate.commands_for("20260728-missing")
+    assert gate.run_gate(root, commands=commands, runner=real_steering_lint_runner(outputs)) == 2
+    assert len(outputs) == 1
+    assert "見つかりません" in outputs[0]
 
 
 def test_main_rejects_too_many_arguments(capsys: pytest.CaptureFixture[str]) -> None:

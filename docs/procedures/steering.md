@@ -39,8 +39,10 @@ tasklistの先頭に固定形式で記録する。
   - `active`と正当な`paused`の未完了は違反にしない
 - 完了検査: `python3 scripts/steering_lint.py --require-complete [対象]`
   - 通常規則を同じ1回の走査で評価し、指定対象だけ`complete`を要求する
+  - 対象を省略(最新)したときに日付付きのステアリングが0件(配布直後・setup-project直後)なら、完了検査をスキップし、その旨を標準出力に表示する。明示した対象が見つからない場合と、`.steering/`自体がない場合はエラー(終了コード2)
+  - スキップが表示されたPRでは、PR本文に「ステアリングがなく、完了検査の対象がない」旨を書く
 - 最終ゲート: `scripts/local_quality_gate.py`
-  - 既定では最新、`--steering [日付付き名]`指定時は明示対象としてsteering lintを1回実行する
+  - 既定では最新(0件なら上記のとおりスキップ)、`--steering [日付付き名]`指定時は明示対象としてsteering lintを1回実行する
   - add-featureでは別作業の新しいsteeringに影響されないよう、現在のステアリング名を必ず明示する
 - GitHub Actionsは利用権限と予算がある場合だけ手動実行する任意補助経路とする
 

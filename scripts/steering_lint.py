@@ -52,6 +52,7 @@ PAUSE_REQUIRED_LABELS = (
 RETROSPECTIVE_HEADING = "## 実装後の振り返り"
 REQUIRED_FILES = ("requirements.md", "design.md", "tasklist.md")
 LATEST_TARGET = "latest"
+ZERO_DATED_SKIP_MESSAGE = "完了検査をスキップしました（日付付きのステアリングが0件）"
 
 
 class Violation(NamedTuple):
@@ -404,13 +405,18 @@ def check_completion_target(
     ]
 
 
-def resolve_completion_target(project_root: Path, value: str) -> Path:
-    """latestまたは日付付きディレクトリ名を完了対象へ解決する。"""
-    dirs = iter_steering_dirs(project_root)
+def resolve_completion_target(project_root: Path, value: str) -> Path | None:
+    """latestまたは日付付きディレクトリ名を完了対象へ解決する。
+
+    latestで日付付きディレクトリが0件(配布直後・setup-project直後)のときは、
+    完了検査の対象がないことをNoneで返す。明示した対象が見つからない場合と、
+    .steering自体がない場合(プロジェクトルートの指定誤り等)はValueError。
+    """
     if value == LATEST_TARGET:
-        if not dirs:
-            raise ValueError("完了検査対象のステアリングがありません")
-        return dirs[-1]
+        if not (project_root / ".steering").is_dir():
+            raise ValueError(f".steeringディレクトリがありません: {project_root}")
+        dirs = iter_steering_dirs(project_root)
+        return dirs[-1] if dirs else None
 
     candidate = Path(value)
     if candidate.is_absolute():
@@ -466,6 +472,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         except ValueError as exc:
             print(f"steering lint: {exc}", file=sys.stderr)
             return 2
+        if completion_target is None:
+            print(f"steering lint: {ZERO_DATED_SKIP_MESSAGE}")
     violations = lint(project_root, completion_target)
     if not violations:
         return 0
