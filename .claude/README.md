@@ -70,10 +70,13 @@
 
 **実行タイミング**: このテンプレートから新しいリポジトリを作成した直後。
 
-**動作フロー**:
-1. `docs/ideas/` 内のファイルを読み込み、インプットとして利用
-2. `prd-writing` スキルで `docs/product-requirements.md` を作成し、**AskUserQuestionで承認確認**（承認/修正の選択式。PRDはスキップ不可）
-3. 以降、`functional-design` → `architecture-design` → `repository-structure` → `development-guidelines` → `glossary-creation` の順に作成し、各ドキュメントごとにAskUserQuestionで承認確認（承認して次へ/修正を指示する/スキップ）
+**動作フロー**（手順の正は `docs/procedures/setup-project.md`）:
+1. 最新のmainから `feature/setup-project` ブランチを作成（Issue・ステアリングは作らない。AGENTS.mdの規約の例外）
+2. `docs/ideas/` 内のファイルを読み込み、インプットとして利用。なければ対話で要求を聞き取る（プロジェクトの目的を含む）
+3. `prd-writing` スキルで `docs/product-requirements.md` を作成し、**AskUserQuestionで承認確認**（承認/修正の選択式。PRDはスキップ不可）
+4. 以降、`functional-design` → `architecture-design` → `repository-structure` → `development-guidelines` → `glossary-creation` の順に作成し、各ドキュメントごとにAskUserQuestionで承認確認（承認して次へ/修正を指示する/スキップ）。承認された文書ごとにコミットする
+5. 承認済みドキュメントの誤りに気づいたら、編集する前に承認を求め、独立のコミットで訂正する
+6. ローカル品質ゲートを実行し、ユーザーに確認してからpush・PR作成
 
 **カスタマイズ方法**: `commands/setup-project.md` の「ステップ」を編集することで、作成するドキュメントの順序・内容を変更できます。
 

@@ -99,6 +99,7 @@
     "tests/procedures/test_distill_procedure.py",
     "tests/procedures/test_guard_forbidden_words.py",
     "tests/procedures/test_lightweight_path_criteria.py",
+    "tests/procedures/test_setup_project_procedure.py",
     "tests/scripts/test_check_pr_file_overlap.py",
     "tests/scripts/test_local_quality_gate.py",
     "uv.lock"

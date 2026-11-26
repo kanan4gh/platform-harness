@@ -87,7 +87,7 @@ aws sts get-caller-identity
 /setup-project
 ```
 
-対話的に `docs/` 以下の6つのドキュメントを作成します。
+対話的に `docs/` 以下の6つのドキュメントを作成します。`feature/setup-project` ブランチ上で、承認したドキュメントごとにコミットし、最後にローカル品質ゲートを実行し、確認のうえpush・PR作成を行います(GitHub Issueとステアリングは作りません)。手順5のAGENTS.mdのカスタマイズを未コミットのまま実行した場合は、ブランチ作成の直後に独立のコミットになります。手順の正は `docs/procedures/setup-project.md` です。
 
 ## 含まれるツール
 
