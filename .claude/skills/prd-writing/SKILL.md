@@ -24,9 +24,9 @@ PRDの入力は、setup-project 手順(`docs/procedures/setup-project.md`)のス
 
 ## 既存ドキュメントの優先順位
 
-**空のテンプレートは既存のPRDとみなしません**: `docs/product-requirements.md` が見出し・HTMLコメント・プレースホルダーだけの状態(配布直後の状態)なら、新規作成として扱います。
+**空のテンプレートは既存のPRDとみなしません**: `docs/product-requirements.md` が配布時のテンプレートから変更されていない(リポジトリを作成した時点のコミットから差分がない)なら、新規作成として扱います。テンプレートに含まれる見出し・HTMLコメント・プレースホルダー(`[...]` 等)・例示は、プロジェクト固有の記述ではありません。
 
-**重要**: `docs/product-requirements.md` にプロジェクト固有の記述がある既存のPRDがある場合、
+**重要**: `docs/product-requirements.md` にプロジェクト固有の記述が加えられている(既存のPRDがある)場合、
 以下の優先順位に従ってください:
 
 1. **既存のPRD (`docs/product-requirements.md`)** - 最優先

@@ -94,6 +94,8 @@ def test_correction_requires_approval_before_edit_and_separate_commit() -> None:
         correction = section(read(path), "承認済みドキュメントの訂正")
         assert "承認を求める前に、承認済みドキュメントを編集しない" in correction
         assert "独立のコミット" in correction
+        assert "訂正対象のファイルだけ" in correction
+        assert "見送った訂正" in correction
         assert_in_order(
             correction,
             ("訂正案", "訂正を承認する", "承認された場合だけ編集", "独立のコミット"),
@@ -108,6 +110,9 @@ def test_step0_has_interview_path_with_project_purpose() -> None:
         for item in INTERVIEW_ITEMS:
             assert item in step0, f"{path.name}: {item}"
         assert "プロダクト以外の目的" in step0
+        # 未コミットの入力を引き継ぐため、作業ツリー分離は使わない
+        assert "作業ツリー分離" in step0
+        assert "は使わない" in step0
 
 
 def test_empty_template_is_not_treated_as_existing_document() -> None:
@@ -115,6 +120,7 @@ def test_empty_template_is_not_treated_as_existing_document() -> None:
         text = read(path)
         assert "HTMLコメント" in text, path.name
         assert "新規作成として扱" in text, path.name
+        assert "配布時のテンプレートから変更されていない" in text, path.name
 
 
 def test_step7_runs_gate_without_steering_and_confirms_before_push() -> None:
@@ -123,7 +129,12 @@ def test_step7_runs_gate_without_steering_and_confirms_before_push() -> None:
         assert "local_quality_gate.py" in step7
         assert "`--steering` を付けずに" in step7
         assert "完了検査の対象がない" in step7
-        assert_in_order(step7, ("local_quality_gate.py", "可否", "push"))
+        assert "見送った訂正" in step7
+        assert "1を再実行" in step7
+        assert_in_order(
+            step7, ("local_quality_gate.py", "可否を", "承認されたらブランチをpush")
+        )
+        assert "ブランチを残す" in step7
 
 
 def test_claude_adapter_declares_its_differences() -> None:
