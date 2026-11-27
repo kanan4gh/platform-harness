@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path
 from types import ModuleType
 
 import pytest
@@ -348,7 +348,8 @@ def test_cli_error_does_not_modify_tasklist(tmp_path: Path) -> None:
     assert target.read_text(encoding="utf-8") == original
 
 
-# 互換用の旧サブコマンド名。手順書には書かず、既存の派生プロジェクト・スクリプトのためだけに受け付ける。
+# 互換用の旧サブコマンド名。手順書には書かず、
+# 既存の派生プロジェクト・スクリプトのためだけに受け付ける。
 LEGACY_FINISH = state_mod.LEGACY_FINISH_COMMAND
 
 

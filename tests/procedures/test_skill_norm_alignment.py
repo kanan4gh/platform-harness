@@ -23,8 +23,8 @@ CI 必須を既定にしており、AGENTS.md(作業ブランチから PR で ma
 
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 import pytest
 
@@ -68,7 +68,8 @@ LINE_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
 ALLOWED_WORKFLOW_EVENTS: frozenset[str] = frozenset({"workflow_dispatch"})
 
 FENCE_PATTERN = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
-# `on:` / `"on":` / `'on':` の後に値(インライン形式)または何もない(ブロック形式)。行末コメントは除く。
+# `on:` / `"on":` / `'on':` の後に値(インライン形式)または何もない(ブロック形式)。
+# 行末コメントは除く。
 ON_KEY = re.compile(r"""^(\s*)["']?on["']?\s*:\s*(.*?)\s*(?:#.*)?$""")
 EVENT_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 BLOCK_EVENT = re.compile(r"""^\s*(?:-\s*)?["']?([A-Za-z_][A-Za-z0-9_]*)["']?\s*(?::|$)""")
@@ -228,19 +229,22 @@ def test_detector_flags_norm_violations(text: str, rule: str) -> None:
         "- `development-guidelines.md`: 開発ガイドライン",
         "├── development-guidelines.md   # 開発ガイドライン",
         "1. **development-guidelinesスキル**をロード",
-        "`.claude/skills/development-guidelines/`(prd-writing / development-guidelines / glossary-creation)",
+        "`.claude/skills/development-guidelines/`"
+        "(prd-writing / development-guidelines / glossary-creation)",
         "name: development-guidelines",
         "We develop features on short-lived branches.",
         # 現行の規範どおりの記述
         "### ブランチ戦略（作業ブランチ + PR → main）",
         "統合用ブランチを置くモデルは、本ガイドで上書きして導入しない",
         "Git Flow は使わない",
-        "```yaml\nname: CI\non:\n  workflow_dispatch:\njobs:\n  test:\n    runs-on: ubuntu-latest\n```",
+        "```yaml\nname: CI\non:\n  workflow_dispatch:\n"
+        "jobs:\n  test:\n    runs-on: ubuntu-latest\n```",
         "```yaml\non: workflow_dispatch\n```",
         "```yaml\non: workflow_dispatch # 手動実行のみ\n```",
         '```yaml\n"on":\n  workflow_dispatch:\n```',
         # workflow_dispatch の入力名など、イベントより深い字下げのキーは対象外
-        "```yaml\non:\n  workflow_dispatch:\n    inputs:\n      push:\n        type: boolean\njobs:\n```",
+        "```yaml\non:\n  workflow_dispatch:\n    inputs:\n"
+        "      push:\n        type: boolean\njobs:\n```",
         # 入れ子のフェンスが閉じた後の地の文は、コードとして扱わない
         "```markdown\n```typescript\nconst a = 1;\n```\n```\n\non: [push] とはしない",
         "```bash\ngit checkout main\ngit merge feature/x\n```",

@@ -1,6 +1,8 @@
 # 実装ガイド (Implementation Guide)
 
-## TypeScript/JavaScript 規約
+> **技術スタックについて**: 本ガイドのコード例・ファイル名・ツール名は、TypeScript(Node.js)のプロジェクトを例にしている。既定の技術スタックではない。プロジェクトの技術スタック(AGENTS.md 技術スタック固有層、`docs/architecture.md`)に合わせて読み替える。
+
+## 言語別の規約(例: TypeScript/JavaScript)
 
 ### 型定義
 

@@ -1,5 +1,7 @@
 # リポジトリ構造定義書 (Repository Structure Document)
 
+<!-- 技術スタックについて: このテンプレートのコード例・ファイル名は TypeScript を例にしている。既定の技術スタックではないため、プロジェクトの技術スタック(AGENTS.md 技術スタック固有層、docs/architecture.md)に合わせて書き換える -->
+
 ## プロジェクト構造
 
 ```
@@ -290,16 +292,17 @@ src/
 ### .gitignore
 
 プロジェクトで除外すべきファイル:
-- `node_modules/`
-- `dist/`
+- 言語・ツールが生成する依存・キャッシュ(例: Python なら `.venv/`・`__pycache__/`、Node.js なら `node_modules/`)
+- ビルド成果物(例: `dist/`)
 - `.env`
-- `.steering/` (タスク管理用の一時ファイル)
 - `*.log`
 - `.DS_Store`
 
-### .prettierignore, .eslintignore
+`.steering/` は除外しない(作業単位のドキュメントは履歴として Git で追跡する。AGENTS.md)。
 
-ツールで除外すべきファイル:
+### ツールの除外設定(例: lint・フォーマッタ)
+
+lint・フォーマッタ等の検査対象から除外すべきファイル(Git の追跡対象から外すものではない):
 - `dist/`
 - `node_modules/`
 - `.steering/`

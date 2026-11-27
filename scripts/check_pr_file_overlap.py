@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import subprocess
+import sys
 from collections.abc import Callable, Sequence
 from itertools import combinations
 from pathlib import Path, PurePosixPath
-import subprocess
-import sys
 
 
 class InputError(ValueError):

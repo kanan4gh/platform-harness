@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import argparse
 import ast
-from dataclasses import dataclass
 import json
-from pathlib import Path
 import re
 import shlex
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 DEFAULT_POLICY = Path(__file__).with_name("metered_automation_policy.json")
@@ -115,7 +115,8 @@ def load_policy(path: Path) -> Policy:
     )
     overlap = set(include_paths) & set(exclude_paths)
     if overlap:
-        raise PolicyError(f"paths cannot be both included and excluded: {sorted(map(str, overlap))}")
+        overlapping = sorted(map(str, overlap))
+        raise PolicyError(f"paths cannot be both included and excluded: {overlapping}")
     for path_item in exclude_paths:
         if len(path_item.parts) == 1 and str(path_item) not in PROTECTED_EXCLUDES:
             if not str(path_item).startswith(".") and str(path_item) != "__pycache__":
@@ -128,7 +129,9 @@ def load_policy(path: Path) -> Policy:
 
 
 def _is_excluded(relative_path: Path, excludes: tuple[Path, ...]) -> bool:
-    return any(relative_path == excluded or excluded in relative_path.parents for excluded in excludes)
+    return any(
+        relative_path == excluded or excluded in relative_path.parents for excluded in excludes
+    )
 
 
 def iter_target_files(root: Path, policy: Policy) -> list[Path]:

@@ -3,17 +3,16 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import json
 import os
-from pathlib import Path, PurePosixPath
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
+from pathlib import Path, PurePosixPath
 from typing import Sequence
-
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = PROJECT_ROOT / "distribution" / "template-manifest.json"

@@ -60,7 +60,7 @@
 
 命名規則: `20250115-add-user-profile` 形式
 
-**IssueとステアリングはセットでGitHub Issueを先に作成し、ステアリングの `requirements.md` に紐づける。**
+**IssueとステアリングはセットでGitHub Issueを先に作成し、ステアリングの `requirements.md` に紐づける。**(初回セットアップの setup-project は例外で、Issue とステアリングを作らない。理由と作業単位は `docs/procedures/setup-project.md` の「作業単位」を参照)
 
 #### ステアリング手順の実行
 
@@ -116,9 +116,11 @@ steering 手順の実体は `docs/procedures/steering.md`(テンプレートは 
 - `design.md`: 変更内容の設計（軽量パス適用時は省略する）
 - `tasklist.md`: タスクリスト
 
+`.steering/` の作業ディレクトリは Git で追跡し、履歴として保持する(`.gitignore` の例やツールの既定で除外して履歴を失わない)。
+
 ### 手順書(`docs/procedures/`)
 
-SDDプロセスの各手順(steering / distill / add-feature / review-docs / validate-implementation / setup-project)のハーネス中立な手順書と、ステアリング用テンプレート(`templates/`)を置く。**手順の正はここにあり**、各ハーネスのスキル・コマンド・カスタムプロンプトは手順書を参照する薄いラッパとして実装する。
+SDDプロセスの各手順(steering / distill / add-feature / review-docs / validate-implementation / setup-project / tech-stack-switch)のハーネス中立な手順書と、ステアリング用テンプレート(`templates/`)を置く。**手順の正はここにあり**、各ハーネスのスキル・コマンド・カスタムプロンプトは手順書を参照する薄いラッパとして実装する。
 
 ### ツール設定
 
@@ -201,30 +203,29 @@ SDDプロセスの各手順(steering / distill / add-feature / review-docs / val
 ### 初回セットアップ
 
 1. このテンプレートを使用
-2. `AGENTS.md` のプロダクト固有層・技術スタック固有層をプロダクトに合わせて書き換える
+2. `AGENTS.md` のプロダクト固有層をプロダクトに合わせて書き換える(技術スタック固有層の記入欄はまだ書き換えない)
 3. `/setup-project` で永続的ドキュメント作成（対話的に6つ作成）
-4. `/add-feature [機能]` で機能実装
+4. `docs/architecture.md` で決めた技術スタックに合わせ、`docs/procedures/tech-stack-switch.md` に従って技術スタック固有層と関連ファイルを切り替える(`/add-feature` で1つの作業として行う)
+5. `/add-feature [機能]` で機能実装
 
 ---
 
 # 技術スタック固有層
 
-<!-- 他のリポジトリへの移植時: このセクションを新しい技術スタックの情報に書き換える -->
+<!-- 技術スタックを決めたら、「プロダクトの技術スタック」と「プロダクトの確認コマンド」の記入欄を書き換える(手順: docs/procedures/tech-stack-switch.md) -->
 
-## 技術スタック
+## ハーネスの道具（固定）
 
-- 開発環境: devcontainer
+ハーネス自身(`scripts/`・`tests/`・各アダプタのフック)を動かす道具である。プロダクトの技術スタックにかかわらず残し、書き換えない。
+
 - Python 3.12
 - パッケージマネージャー: uv
-- IaC: AWS CDK（TypeScript or Python）
-- サーバーレス: AWS SAM CLI
-- AWS認証: AWS Profile（`~/.aws/` マウント）
 - テスト: pytest
 - 型チェック: basedpyright
   - テストで動的モジュールロード(importlib)を使う場合、reportAny警告が大量に出るため `typeCheckingMode = "standard"` を既定とする(pyproject.toml)
-- リンター: ruff
+- リンター: ruff(`select = ["E", "F", "I"]` を明示する。pyproject.toml)
 
-## 主要コマンド
+## ハーネスの必須コマンド
 
 ```bash
 uv sync              # 依存関係インストール
@@ -234,9 +235,40 @@ uv run basedpyright  # 型チェック
 python3 scripts/steering_lint.py  # ステアリング規律lint
 python3 scripts/metered_automation_lint.py  # 外部有料自動化lint
 uv run python3 scripts/local_quality_gate.py  # 必須の単一ローカル品質ゲート
-cdk --version        # CDK 動作確認
-sam --version        # SAM CLI 動作確認
-aws sts get-caller-identity  # AWS認証確認
+```
+
+## プロダクトの技術スタック（記入欄）
+
+**既定は決めていない。特定のクラウドにも結びつけない。** setup-project で `docs/architecture.md` を承認した後、`docs/procedures/tech-stack-switch.md` のチェックリストに従って書き換える。
+
+- 開発環境: [記入。例: devcontainer]
+- 言語・ランタイム: [記入]
+- パッケージマネージャー: [記入]
+- フレームワーク・主要ライブラリ: [記入。なければ「なし」]
+- インフラ(クラウド等): [記入。なければ「なし」]
+- テスト: [記入]
+- 型チェック: [記入。なければ「なし」]
+- リンター: [記入]
+
+> **記入の例(例であって既定ではない)**: ハーネスの道具と同じ構成で、クラウドを使わない場合。
+>
+> - 開発環境: devcontainer
+> - 言語・ランタイム: Python 3.12
+> - パッケージマネージャー: uv
+> - フレームワーク・主要ライブラリ: なし
+> - インフラ(クラウド等): なし
+> - テスト: pytest
+> - 型チェック: basedpyright
+> - リンター: ruff
+>
+> クラウド等を使う場合の例は `docs/procedures/tech-stack-switch.md` の付録にある。
+
+## プロダクトの確認コマンド（記入欄）
+
+プロダクト固有の確認コマンドを書く。ハーネスの必須コマンドで足りる場合(上の記入の例の構成)は「なし」と書く。
+
+```bash
+# [記入。例: npm test、プロダクトのビルド、クラウドの認証確認]
 ```
 
 ## PR・リリースフロー
@@ -259,11 +291,12 @@ AGENTS.mdはSDDプロセスの正典であり、3層構造になっています�
 1. このテンプレートリポジトリを "Use this template" で複製する
 2. **汎用層はそのまま残す**
 3. **プロダクト固有層**を新しいプロダクトの情報に書き換える
-4. **技術スタック固有層**を新しい技術スタックの情報に書き換える
+4. **技術スタック固有層**の記入欄を、新しい技術スタックの情報に書き換える(setup-project で architecture.md を承認した後。`docs/procedures/tech-stack-switch.md`)
 
 ### 技術スタックを変更するとき
 
-- **技術スタック固有層だけ**書き換える
+- **技術スタック固有層だけ**書き換える(「ハーネスの道具」と「ハーネスの必須コマンド」は残し、記入欄を書き換える)
+- 関連ファイル(`pyproject.toml`、`.devcontainer/`、`.mcp.json.example` 等)は `docs/procedures/tech-stack-switch.md` のチェックリストに従って直す
 - 汎用層・プロダクト固有層はそのまま
 
 ### ハーネスを換装・併用するとき

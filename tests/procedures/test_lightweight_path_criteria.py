@@ -137,7 +137,9 @@ def test_procedures_require_recording_the_judgement_for_both_paths() -> None:
     assert "**通常パス・軽量パスのどちらでも**基準4項目それぞれの判定結果を記録する" in steering
 
     agents = AGENTS.read_text(encoding="utf-8")
-    assert "通常パス・軽量パスのどちらでも `requirements.md` の「パス判定」セクションに記録" in agents
+    assert (
+        "通常パス・軽量パスのどちらでも `requirements.md` の「パス判定」セクションに記録"
+    ) in agents
 
 
 def test_template_records_the_judgement_for_both_paths() -> None:

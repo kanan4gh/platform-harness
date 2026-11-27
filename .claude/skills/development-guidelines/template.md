@@ -1,12 +1,14 @@
 # 開発ガイドライン (Development Guidelines)
 
+<!-- 技術スタックについて: このテンプレートのコード例・ファイル名は TypeScript を例にしている。既定の技術スタックではないため、プロジェクトの技術スタック(AGENTS.md 技術スタック固有層、docs/architecture.md)に合わせて書き換える -->
+
 ## コーディング規約
 
 ### 命名規則
 
 #### 変数・関数
 
-**TypeScript/JavaScript**:
+**例: TypeScript/JavaScript**:
 ```typescript
 // ✅ 良い例
 const userProfileData = fetchUserProfile();
