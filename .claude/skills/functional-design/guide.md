@@ -53,14 +53,14 @@ graph TB
     CLI[CLIインターフェース]
     Commander[Commander.js]
     TaskManager[TaskManager]
-    PriorityEstimator[PriorityEstimator]
+    ImportanceEstimator[ImportanceEstimator]
     FileStorage[FileStorage]
     JSON[(tasks.json)]
 
     User --> CLI
     CLI --> Commander
     Commander --> TaskManager
-    TaskManager --> PriorityEstimator
+    TaskManager --> ImportanceEstimator
     TaskManager --> FileStorage
     FileStorage --> JSON
 ```
@@ -78,8 +78,8 @@ interface Task {
   title: string;                 // 1-200文字
   description?: string;          // オプション、Markdown形式
   status: TaskStatus;            // 'todo' | 'in_progress' | 'completed'
-  priority: TaskPriority;        // 'high' | 'medium' | 'low'
-  estimatedPriority?: TaskPriority;  // 自動推定された優先度
+  importance: TaskImportance;    // 'high' | 'medium' | 'low'
+  estimatedImportance?: TaskImportance;  // 自動推定された重要度
   dueDate?: Date;                // 期限
   createdAt: Date;               // 作成日時
   updatedAt: Date;               // 更新日時
@@ -87,7 +87,7 @@ interface Task {
 }
 
 type TaskStatus = 'todo' | 'in_progress' | 'completed';
-type TaskPriority = 'high' | 'medium' | 'low';
+type TaskImportance = 'high' | 'medium' | 'low';
 
 interface StatusChange {
   from: TaskStatus;
@@ -188,11 +188,11 @@ class FileStorage {
 
 ### ステップ5: アルゴリズム設計（該当する場合）
 
-複雑なロジック（例: 優先度自動推定）は詳細に設計します。
+複雑なロジック（例: 重要度自動推定）は詳細に設計します。
 
-#### 優先度自動推定アルゴリズムの例
+#### 重要度自動推定アルゴリズムの例
 
-**目的**: タスクの期限、作成日時、ステータスから優先度を自動推定
+**目的**: タスクの期限、作成日時、ステータスから重要度を自動推定
 
 **計算ロジック**:
 
@@ -279,18 +279,18 @@ function calculateTotalScore(task: Task): number {
 }
 ```
 
-##### ステップ5: 優先度分類
+##### ステップ5: 重要度分類
 
 **閾値による分類**:
 ```
-- 70点以上: high（高優先度）
-- 40-70点: medium（中優先度）
-- 40点未満: low（低優先度）
+- 70点以上: high（重要度が高い）
+- 40-70点: medium（重要度が中程度）
+- 40点未満: low（重要度が低い）
 ```
 
 **計算式**:
 ```typescript
-function estimatePriority(task: Task): TaskPriority {
+function estimateImportance(task: Task): TaskImportance {
   const score = calculateTotalScore(task);
 
   if (score >= 70) return 'high';
@@ -301,8 +301,8 @@ function estimatePriority(task: Task): TaskPriority {
 
 **完全な実装例**:
 ```typescript
-class PriorityEstimator {
-  estimate(task: Task): TaskPriority {
+class ImportanceEstimator {
+  estimate(task: Task): TaskImportance {
     const deadlineScore = this.calculateDeadlineScore(task.dueDate);
     const ageScore = this.calculateAgeScore(task.createdAt);
     const statusScore = this.calculateStatusScore(task.status);
@@ -356,15 +356,15 @@ sequenceDiagram
     participant User
     participant CLI
     participant TaskManager
-    participant PriorityEstimator
+    participant ImportanceEstimator
     participant FileStorage
 
     User->>CLI: devtask add "タスク"
     CLI->>CLI: 入力をバリデーション
     CLI->>TaskManager: createTask(data)
     TaskManager->>TaskManager: タスクオブジェクト作成
-    TaskManager->>PriorityEstimator: estimate(task)
-    PriorityEstimator-->>TaskManager: 推定優先度
+    TaskManager->>ImportanceEstimator: estimate(task)
+    ImportanceEstimator-->>TaskManager: 推定重要度
     TaskManager->>FileStorage: save(task)
     FileStorage-->>TaskManager: 成功
     TaskManager-->>CLI: 作成されたタスク
@@ -379,7 +379,7 @@ CLIツールの場合、テーブル表示やカラーコーディングを定�
 
 ```
 ┌──────────┬──────────────────┬────────────┬──────────┬───────────────┐
-│ ID       │ タイトル          │ ステータス   │ 優先度    │ 期限           │
+│ ID       │ タイトル          │ ステータス   │ 重要度    │ 期限           │
 ├──────────┼──────────────────┼────────────┼──────────┼───────────────┤
 │ 7a5c6ff0 │ 牛乳を買って帰る.   │ 未着手      │ 高       │ 2025-11-05    │
 │          │                  │            │          │ (あと1日)      │
@@ -393,7 +393,7 @@ CLIツールの場合、テーブル表示やカラーコーディングを定�
 - 進行中 (in_progress): 黄
 - 未着手 (todo): 白
 
-**優先度の色分け**:
+**重要度の色分け**:
 - 高 (high): 赤
 - 中 (medium): 黄
 - 低 (low): 青
@@ -418,8 +418,8 @@ CLIツールの場合、テーブル表示やカラーコーディングを定�
       "title": "牛乳を買って帰る",
       "description": "",
       "status": "todo",
-      "priority": "high",
-      "estimatedPriority": "medium",
+      "importance": "high",
+      "estimatedImportance": "medium",
       "dueDate": "2025-11-05T00:00:00.000Z",
       "createdAt": "2025-11-04T10:00:00.000Z",
       "updatedAt": "2025-11-04T10:00:00.000Z"
