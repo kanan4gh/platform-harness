@@ -23,7 +23,10 @@ def test_defines_planned_and_actual_two_stage_overlap_checks() -> None:
 def test_requires_empty_intersections_and_three_resolution_methods() -> None:
     text = procedure_text()
     assert "activeなPR計画が2件以上ある場合、全PR組合せの積集合が空集合の場合だけ合格" in text
-    assert "activeなfeature branchが2件以上ある場合、実集合も全PR組合せの積集合が空集合の場合だけ合格" in text
+    assert (
+        "activeなfeature branchが2件以上ある場合、"
+        "実集合も全PR組合せの積集合が空集合の場合だけ合格"
+    ) in text
     assert "**統合**" in text
     assert "**再分割**" in text
     assert "**共通前提の先行正典化**" in text

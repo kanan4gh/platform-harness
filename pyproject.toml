@@ -19,7 +19,22 @@ target-version = "py312"
 line-length = 100
 include = ["*.py", ".claude/hooks/*.py", ".codex/hooks/*.py", ".kiro/hooks/*.py", "scripts/*.py"]
 
+[tool.ruff.lint]
+# ruff の既定ルールは版で変わるため明示する。E: pycodestyle(行の長さ E501 を含む)、
+# F: pyflakes、I: import の並び。ハーネスのファイルもこの規則で違反0を保つ
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# 一時的な除外: 並行作業(U7)が編集中のファイルを参照するテストで、U5では編集しない。
+# U7のマージ後に違反を直し、この表を削除する(kanan4gh/project-uroboros-neo#54)
+"tests/automation/test_workflow_structure.py" = ["I001"]
+"tests/distribution/test_template_distribution.py" = ["I001"]
+"tests/procedures/test_add_feature_ordering.py" = ["E501"]
+"tests/procedures/test_derived_project_rollout.py" = ["I001"]
+
 [tool.basedpyright]
+# アプリのコードを置いたら、そのディレクトリ(例: "src")をここへ足す
+# (docs/procedures/tech-stack-switch.md のチェックリスト)
 include = [".claude/hooks", ".codex/hooks", ".kiro/hooks", "tests", "scripts"]
 # フックが scripts/steering_lint.py をimportするための解決パス
 extraPaths = ["scripts"]

@@ -9,13 +9,13 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 import os
-from pathlib import Path
 import re
 import stat
 import sys
 import tempfile
+from datetime import datetime
+from pathlib import Path
 from typing import Sequence
 
 from steering_lint import (

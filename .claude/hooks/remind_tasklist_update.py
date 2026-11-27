@@ -1,4 +1,7 @@
-"""PostToolUseフック: 実装ファイル編集が続いてもtasklist.mdが更新されない場合、非強制リマインドを注入する。"""
+"""PostToolUseフック: 非強制のtasklist更新リマインドを注入する。
+
+実装ファイルの編集が続いてもtasklist.mdが更新されない場合に注入する。
+"""
 
 import json
 import os

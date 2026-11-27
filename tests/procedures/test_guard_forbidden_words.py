@@ -16,9 +16,9 @@ tasklistの状態値としての complete(地の文や ``状態: complete``)は�
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
 from pathlib import Path
-import re
 
 import pytest
 
