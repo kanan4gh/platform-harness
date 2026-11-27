@@ -30,7 +30,8 @@
 
 - `.claude/skills/` の変更は本文（例・ガイドの記述）だけで、frontmatter・ファイル名・配置を変えない
 - `.claude/README.md` は説明文書であり、表示・実読込・承認境界・Stop 挙動を変えない
-- `.claude/settings.json`、`.claude/hooks/`、`.kiro/agents/*.json`、`.codex/` は変更しない
+- `.claude/settings.json`、`.kiro/agents/*.json`、`.codex/` は変更しない。`.claude/hooks/remind_tasklist_update.py` は E501 修正で1行目の docstring を改行しただけで、ロジック・登録・挙動を変えない（段2で挙動を観察済み）
+- `.agents/skills/add-feature/SKILL.md` と `.claude/commands/add-feature.md` は本文の手順記述だけを変え、frontmatter・ファイル名・配置を変えない（段4の指摘対応）
 - `pyproject.toml` の変更は lint・型検査の設定であり、手順書の基準で不要（結果は品質ゲートで確認する）
 - `.mcp.json.example` は有効でないサンプル設定であり、手順書の基準で不要
 - `.devcontainer/` は開発環境の定義であり、ハーネスのアダプタ構成・権限・フックではない。Claude Code の devcontainer feature 自体は変更しないため、G3 の観察対象（スキル・エージェントの表示と実読込、承認境界、Stop 挙動）を変えない

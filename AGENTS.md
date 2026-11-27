@@ -203,9 +203,10 @@ SDDプロセスの各手順(steering / distill / add-feature / review-docs / val
 ### 初回セットアップ
 
 1. このテンプレートを使用
-2. `AGENTS.md` のプロダクト固有層・技術スタック固有層をプロダクトに合わせて書き換える
+2. `AGENTS.md` のプロダクト固有層をプロダクトに合わせて書き換える(技術スタック固有層の記入欄はまだ書き換えない)
 3. `/setup-project` で永続的ドキュメント作成（対話的に6つ作成）
-4. `/add-feature [機能]` で機能実装
+4. `docs/architecture.md` で決めた技術スタックに合わせ、`docs/procedures/tech-stack-switch.md` に従って技術スタック固有層と関連ファイルを切り替える(`/add-feature` で1つの作業として行う)
+5. `/add-feature [機能]` で機能実装
 
 ---
 
@@ -240,7 +241,7 @@ uv run python3 scripts/local_quality_gate.py  # 必須の単一ローカル品�
 
 **既定は決めていない。特定のクラウドにも結びつけない。** setup-project で `docs/architecture.md` を承認した後、`docs/procedures/tech-stack-switch.md` のチェックリストに従って書き換える。
 
-- 開発環境: [例: devcontainer]
+- 開発環境: [記入。例: devcontainer]
 - 言語・ランタイム: [記入]
 - パッケージマネージャー: [記入]
 - フレームワーク・主要ライブラリ: [記入。なければ「なし」]

@@ -109,6 +109,8 @@ AWS の2サーバー（`aws-mcp`、`awslabs.aws-iac-mcp-server`）を手順書�
 | (b) | ハーネスのパスを `per-file-ignores` で除外 | 派生プロジェクトにも除外が残り、ハーネスのファイルだけ規約外になる。除外対象の一覧の保守が要る |
 | (c) | 変換で配布物だけに `select` を入れる | 配布物にもハーネスの Python ファイルが入るため、(a) か (b) が結局必要。変換が増える |
 
+**実装時の変更（tasklist フェーズ1に記録）**: (a) を基本とし、U7 の対象（`.github/workflows/`、`derived-project-rollout.md`）を参照するテスト4ファイルだけを `per-file-ignores` で一時的に除外した（I001: test_workflow_structure.py・test_derived_project_rollout.py・test_template_distribution.py、E501: test_add_feature_ordering.py）。依頼書が U7 の参照テストの編集を禁じているため。U7 のマージ後に違反を直して除外の表を削除する。この表は配布物の pyproject.toml にも入る。
+
 I001 の自動修正は import の並びだけを変え、挙動を変えない。E501 は文字列の分割・改行で直す（テストの期待文字列は連結で同値を保つ）。
 
 **name / description**: 正典は `platform-harness` のまま変えない（変換規則で書き換えると `uv.lock` の project 名とずれ、ロックの更新が要るため）。チェックリストに「name / description を書き換え、`uv lock` でロックを更新する」手順を置く。description は「スペック駆動開発ハーネスのプラットフォームテンプレート」のままで、テンプレート由来であることが分かる。
@@ -187,3 +189,15 @@ I001 の自動修正は import の並びだけを変え、挙動を変えない�
 ## 将来の拡張性
 
 - 他クラウド（GCP 等）の例が必要になれば、切り替え手順書の付録に「〜を使う場合の例」を並べる
+
+## 配布物の生成と確認の結果（段2、2026-11-28）
+
+- 生成: worktree の HEAD（9423b39）を scratchpad へ clone し、clone の origin だけをローカルで正典の URL にして、ローカル限定の一時 tag `v0.0.0-u5-local` から `scripts/build_template_distribution.py` で生成した（push・GitHub への書き込みはしていない）
+- ファイル数: 103（manifest の `include_paths` 102件 + `.platform-harness-source.json`）。`docs/procedures/tech-stack-switch.md` を含み、`tests/procedures/test_tech_stack_neutrality.py` を含まない
+- AWS の語（`aws`・`cdk`・`sam`・`cloudformation`。uv.lock を除く）を含むファイル: `docs/procedures/tech-stack-switch.md` の1件だけ
+- `.gitignore`: `.steering` を無視する行がない（既存の変換）。`.steering/` は `example/` だけ
+- `pyproject.toml`: `select = ["E", "F", "I"]` と一時除外の表（除外対象のうち2ファイルは配布物に存在しないが、ruff は問題にしない）
+- AGENTS.md: 技術スタック固有層が「ハーネスの道具（固定）」と記入欄 + 例になっている
+- 使い捨てコピーでのローカル品質ゲート: ステアリング0件（完了検査スキップ）と、完了済み fixture ステアリングを明示した場合の両方で全緑（rc=0）
+- 通常の `git add -A` で新しい日付付きステアリングが index に入る
+- 決定性: 同じ入力から別ディレクトリへ再生成し、`diff -r` で内容が一致

@@ -11,7 +11,7 @@ description: 新機能をスペック駆動開発(SDD)フローで実装する�
 
 - **ステップ4のsteering手順**: `.agents/skills/steering/`(=`docs/procedures/steering.md`)を使う
 - **ステップ4.5の承認ゲート**: テキスト方式(選択肢[承認して実装開始/修正を指示する/中止する]を明示して回答を待つ)
-- **ステップ6・段1の検証コマンド**: AGENTS.md技術スタック固有層の「主要コマンド」を使う
+- **ステップ6・段1の検証コマンド**: AGENTS.md技術スタック固有層の「ハーネスの必須コマンド」と、記入があれば「プロダクトの確認コマンド」を使う
 - **ステップ6・段4のスペック準拠検証**: `.codex/agents/implementation-validator.toml` のサブエージェントに委譲する。docs/を変更した場合のドキュメントレビューは `.codex/agents/doc-reviewer.toml` に委譲する
 - **ステップ8-Aの最終品質ゲート**: 振り返り・docs更新と`complete`遷移を終えた後、AGENTS.md技術スタック固有層の単一ゲートコマンドを1回実行して全緑にする
 - **ステップ8-BのG3受け入れ**: ステップ4で「要」と判定した場合のみ実行する。Codex IDEまたは対話型CLIで `docs/procedures/harness-acceptance.md` の Codex 節を実施し、候補ゲート → 候補コミット → G3 → `acceptance-record.md` へ記録 → 最終ゲート再実行 → 記録コミット → PR の順序を守る。非対話LLM実行を代替手段にしない

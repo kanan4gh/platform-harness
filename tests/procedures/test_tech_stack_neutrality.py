@@ -30,7 +30,7 @@ THIS_TEST = "tests/procedures/test_tech_stack_neutrality.py"
 
 # AWS を指す語。lambda(Python の構文)は対象にしない
 AWS_TERMS = re.compile(
-    r"(?i)(?<![A-Za-z0-9_])(aws|cdk|sam)(?![A-Za-z0-9_])|cloudformation"
+    r"(?i)(?<![A-Za-z0-9_])(aws|cdk|sam|s3|dynamodb)(?![A-Za-z0-9_])|cloudformation|amazon"
 )
 # 配布対象のうち、AWS の語を置いてよいのは切り替え手順書だけ
 AWS_ALLOWED = frozenset({"docs/procedures/tech-stack-switch.md"})
@@ -124,6 +124,19 @@ def test_tech_stack_layer_is_a_neutral_form_with_one_example() -> None:
     assert "docs/procedures/tech-stack-switch.md" in layer
 
 
+def test_every_fill_in_field_is_found_by_the_checklist_grep() -> None:
+    # 切り替えチェックリストの順1は `grep -n '\\[記入' AGENTS.md` で記入欄の残りを検出する
+    layer = tech_stack_layer()
+    form = layer[
+        layer.index("## プロダクトの技術スタック（記入欄）") : layer.index("> **記入の例")
+    ]
+    commands = layer[layer.index("## プロダクトの確認コマンド（記入欄）") :]
+    placeholders = re.findall(r"\[[^\]]*\]", form + commands)
+    assert placeholders
+    assert all(item.startswith("[記入") for item in placeholders), placeholders
+    assert "grep -n '\\[記入' AGENTS.md" in SWITCH.read_text(encoding="utf-8")
+
+
 def test_harness_required_commands_stay_in_the_tech_stack_layer() -> None:
     # add-feature 段1と最終ゲートは、技術スタック固有層のコマンドを参照する
     layer = tech_stack_layer()
@@ -179,16 +192,30 @@ def test_switch_procedure_has_checklist_and_aws_example() -> None:
     appendix = text[text.index("## 付録: AWS を使う場合の例") :]
     for item in ("aws-cli", "~/.aws", "AWS_PROFILE", "aws-cdk", "aws-sam-cli", "aws-mcp"):
         assert item in appendix
+    # 付録の AGENTS.md 記入例は、記入欄と同じ見出しと項目で書く
+    start = appendix.index("### AGENTS.md の記入例")
+    example = appendix[start : appendix.index("### `.devcontainer")]
+    for heading in (
+        "## プロダクトの技術スタック（記入欄）",
+        "## プロダクトの確認コマンド（記入欄）",
+    ):
+        assert heading in example
+    form = tech_stack_layer()
+    form = form[form.index("## プロダクトの技術スタック（記入欄）") : form.index("> **記入の例")]
+    for field in re.findall(r"(?m)^- ([^:]+): ", form):
+        assert f"- {field}: " in example, field
 
 
 def test_devcontainer_has_no_aws_defaults() -> None:
     raw = (ROOT / ".devcontainer" / "devcontainer.json").read_text(encoding="utf-8")
     data = json.loads(strip_jsonc_comments(raw))
-    assert not any("aws" in feature for feature in data.get("features", {}))
-    assert not any(".aws" in mount for mount in data.get("mounts", []))
-    assert not any(key.startswith("AWS_") for key in data.get("containerEnv", {}))
+    assert not any("aws" in feature.lower() for feature in data.get("features", {}))
+    assert not any(".aws" in mount.lower() for mount in data.get("mounts", []))
+    assert not any(key.upper().startswith("AWS_") for key in data.get("containerEnv", {}))
     extensions = data["customizations"]["vscode"]["extensions"]
-    assert not any("aws" in extension for extension in extensions)
+    assert not any(
+        "aws" in extension.lower() or "amazon" in extension.lower() for extension in extensions
+    )
     # Claude Code の feature は残す(G3 の観察対象を変えない)
     assert "ghcr.io/anthropics/devcontainer-features/claude-code:1.0" in data["features"]
 
