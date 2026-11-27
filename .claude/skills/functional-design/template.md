@@ -1,5 +1,7 @@
 # 機能設計書 (Functional Design Document)
 
+<!-- 技術スタックについて: このテンプレートのコード例・ファイル名は TypeScript を例にしている。既定の技術スタックではないため、プロジェクトの技術スタック(AGENTS.md 技術スタック固有層、docs/architecture.md)に合わせて書き換える -->
+
 ## システム構成図
 
 ```mermaid

@@ -59,12 +59,13 @@ _記録なし_
 
 ## フェーズ4: 設計スキルの中立化と担保テスト（実装フェーズ / ステップ5）
 
-- [ ] architecture-design（template.md・guide.md）
-- [ ] development-guidelines（SKILL.md・template.md・guides/process.md・guides/implementation.md）
-- [ ] functional-design（template.md・guide.md）
-- [ ] glossary-creation（template.md・guide.md）
-- [ ] repository-structure（template.md・guide.md。`.gitignore` の例を含む）
-- [ ] `tests/procedures/test_tech_stack_neutrality.py` を追加（正典のみ。配布しない）
+- [x] architecture-design（template.md・guide.md）
+- [x] development-guidelines（SKILL.md・template.md・guides/process.md・guides/implementation.md）
+- [x] functional-design（template.md・guide.md）
+- [x] glossary-creation（template.md・guide.md）
+- [x] repository-structure（template.md・guide.md。`.gitignore` の例を含む）
+- [x] `tests/procedures/test_tech_stack_neutrality.py` を追加（正典のみ。配布しない）
+  - 検出力の確認: 同じテストを main（6ea10aa）のスナップショットで実行すると28件が失敗する（AGENTS.md 固有層・AWS の語7ファイル・devcontainer・postCreate・手順書・ruff select・TS 注記10ファイル・技術スタック表・採用ツール・`.gitignore` の例）
 
 ## フェーズ5: 4段検証（ステップ6）
 
