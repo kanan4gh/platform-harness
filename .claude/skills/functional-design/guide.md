@@ -78,7 +78,7 @@ interface Task {
   title: string;                 // 1-200文字
   description?: string;          // オプション、Markdown形式
   status: TaskStatus;            // 'todo' | 'in_progress' | 'completed'
-  importance: TaskImportance;        // 'high' | 'medium' | 'low'
+  importance: TaskImportance;    // 'high' | 'medium' | 'low'
   estimatedImportance?: TaskImportance;  // 自動推定された重要度
   dueDate?: Date;                // 期限
   createdAt: Date;               // 作成日時
@@ -283,9 +283,9 @@ function calculateTotalScore(task: Task): number {
 
 **閾値による分類**:
 ```
-- 70点以上: high（高重要度）
-- 40-70点: medium（中重要度）
-- 40点未満: low（低重要度）
+- 70点以上: high（重要度が高い）
+- 40-70点: medium（重要度が中程度）
+- 40点未満: low（重要度が低い）
 ```
 
 **計算式**:

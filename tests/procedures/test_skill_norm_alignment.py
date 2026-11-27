@@ -53,28 +53,52 @@ LINE_RULES: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("develop-branch", re.compile(rf"[└├│]\s*[─-]*\s*{_DEVELOP}")),
     ("develop-branch", re.compile(rf"{_DEVELOP}\s*(から|へ|に|→|->)")),
     ("develop-branch", re.compile(rf"(→|->)\s*{_DEVELOP}")),
+    (
+        "develop-branch",
+        re.compile(rf"git\s+(checkout|switch|merge|pull|push|rebase|branch)\b.*{_DEVELOP}"),
+    ),
     ("old-task-priority", re.compile(r"TaskPriority")),
     ("old-task-priority", re.compile(r"PriorityEstimator")),
     ("old-task-priority", re.compile(r"--priority(?![A-Za-z0-9_-])")),
     ("old-task-priority", re.compile(r"優先度\s*[(（]\s*高\s*/\s*中\s*/\s*低")),
 )
 
-FENCE_PATTERN = re.compile(r"^\s*(`{3,}|~{3,})")
-ON_INLINE = re.compile(r"^\s*on:\s*(\S.*)$")
-ON_BLOCK = re.compile(r"^(\s*)on:\s*$")
-AUTO_TRIGGER = re.compile(r"(?<![A-Za-z0-9_-])(push|pull_request)(?![A-Za-z0-9_-])")
-AUTO_TRIGGER_KEY = re.compile(r"^\s*-?\s*(push|pull_request)\s*:?\s*$")
+# 外部自動化ポリシーが許す workflow のトリガーは手動実行だけ。これ以外のイベント
+# (push / pull_request / pull_request_target / schedule 等)はすべて自動起動として扱う。
+ALLOWED_WORKFLOW_EVENTS: frozenset[str] = frozenset({"workflow_dispatch"})
+
+FENCE_PATTERN = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")
+# `on:` / `"on":` / `'on':` の後に値(インライン形式)または何もない(ブロック形式)。行末コメントは除く。
+ON_KEY = re.compile(r"""^(\s*)["']?on["']?\s*:\s*(.*?)\s*(?:#.*)?$""")
+EVENT_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+BLOCK_EVENT = re.compile(r"""^\s*(?:-\s*)?["']?([A-Za-z_][A-Za-z0-9_]*)["']?\s*(?::|$)""")
 
 
 def _indent(line: str) -> int:
     return len(line) - len(line.lstrip())
 
 
+def _fence_transition(stack: list[str], token: str, info: str) -> None:
+    """フェンスの開閉を更新する。
+
+    スキルのガイドは ```markdown の例の中に ```typescript 等を入れ子にしている。
+    開いたフェンスの中で情報文字列付きのフェンスが現れたら入れ子の開始、
+    情報文字列のない同種・同長以上のフェンスなら最も内側の終了とみなす。
+    """
+    if not stack:
+        stack.append(token)
+    elif not info and token[0] == stack[-1][0] and len(token) >= len(stack[-1]):
+        stack.pop()
+    elif info:
+        stack.append(token)
+
+
 def find_violations(text: str) -> list[tuple[int, str, str]]:
     """(行番号, 規則ID, 行) を返す。CI の自動起動はコードブロック内だけを検査する。"""
     violations: list[tuple[int, str, str]] = []
-    fence: str | None = None
+    stack: list[str] = []
     on_indent: int | None = None  # ブロック形式の `on:` の字下げ(その配下を検査中)
+    event_indent: int | None = None  # `on:` 直下のイベント名の字下げ
     for number, line in enumerate(text.splitlines(), start=1):
         for rule_id, pattern in LINE_RULES:
             if pattern.search(line):
@@ -82,28 +106,33 @@ def find_violations(text: str) -> list[tuple[int, str, str]]:
                 break
         marker = FENCE_PATTERN.match(line)
         if marker is not None:
-            token = marker.group(1)
-            if fence is None:
-                fence = token
-            elif token[0] == fence[0] and len(token) >= len(fence) and not line.strip()[len(token):]:
-                fence = None
-            on_indent = None
+            _fence_transition(stack, marker.group(1), marker.group(2).strip())
+            on_indent = event_indent = None
             continue
-        if fence is None:
+        if not stack or not line.strip():
             continue
         if on_indent is not None:
-            if line.strip() and _indent(line) <= on_indent:
-                on_indent = None
-            elif AUTO_TRIGGER_KEY.match(line):
-                violations.append((number, "ci-auto-trigger", line.strip()))
+            indent = _indent(line)
+            if indent <= on_indent:
+                on_indent = event_indent = None
+            else:
+                if event_indent is None:
+                    event_indent = indent
+                if indent == event_indent:
+                    event = BLOCK_EVENT.match(line)
+                    if event is not None and event.group(1) not in ALLOWED_WORKFLOW_EVENTS:
+                        violations.append((number, "ci-auto-trigger", line.strip()))
                 continue
-        inline = ON_INLINE.match(line)
-        if inline is not None and AUTO_TRIGGER.search(inline.group(1)):
-            violations.append((number, "ci-auto-trigger", line.strip()))
+        on_key = ON_KEY.match(line)
+        if on_key is None:
             continue
-        block = ON_BLOCK.match(line)
-        if block is not None:
-            on_indent = len(block.group(1))
+        value = on_key.group(2)
+        if value:
+            events = set(EVENT_NAME.findall(value))
+            if events - ALLOWED_WORKFLOW_EVENTS:
+                violations.append((number, "ci-auto-trigger", line.strip()))
+        else:
+            on_indent = len(on_key.group(1))
     return violations
 
 
@@ -168,6 +197,16 @@ def test_development_guidelines_skill_gives_agents_md_precedence() -> None:
         ("```yaml\non: push\n```", "ci-auto-trigger"),
         ("```yaml\non:\n  push:\n    branches: [main]\n```", "ci-auto-trigger"),
         ("```yaml\non:\n  workflow_dispatch:\n  pull_request:\n```", "ci-auto-trigger"),
+        ("```yaml\non:\n  schedule:\n    - cron: '0 0 * * *'\n```", "ci-auto-trigger"),
+        ("```yaml\non: [pull_request_target]\n```", "ci-auto-trigger"),
+        ('```yaml\n"on": [push]\n```', "ci-auto-trigger"),
+        ("```yaml\non: # trigger\n  push:\n```", "ci-auto-trigger"),
+        ("```yaml\non:\n  push: {branches: [main]}\n```", "ci-auto-trigger"),
+        ("```yaml\non:\n  - push\n```", "ci-auto-trigger"),
+        # 入れ子のフェンス(```markdown の中の ```yaml)でも検査する
+        ("```markdown\n説明\n```yaml\non: [push]\n```\n```", "ci-auto-trigger"),
+        ("```bash\ngit checkout -b feature/foo develop\n```", "develop-branch"),
+        ("```bash\ngit merge develop\n```", "develop-branch"),
         ("  priority: TaskPriority;", "old-task-priority"),
         ("class PriorityEstimator {", "old-task-priority"),
         ('devtask add "タスク名" --priority high', "old-task-priority"),
@@ -198,6 +237,13 @@ def test_detector_flags_norm_violations(text: str, rule: str) -> None:
         "Git Flow は使わない",
         "```yaml\nname: CI\non:\n  workflow_dispatch:\njobs:\n  test:\n    runs-on: ubuntu-latest\n```",
         "```yaml\non: workflow_dispatch\n```",
+        "```yaml\non: workflow_dispatch # 手動実行のみ\n```",
+        '```yaml\n"on":\n  workflow_dispatch:\n```',
+        # workflow_dispatch の入力名など、イベントより深い字下げのキーは対象外
+        "```yaml\non:\n  workflow_dispatch:\n    inputs:\n      push:\n        type: boolean\njobs:\n```",
+        # 入れ子のフェンスが閉じた後の地の文は、コードとして扱わない
+        "```markdown\n```typescript\nconst a = 1;\n```\n```\n\non: [push] とはしない",
+        "```bash\ngit checkout main\ngit merge feature/x\n```",
         "push・pull_request では自動起動せず、CIの成功をPRの完了条件にしない",
         "on: [push, pull_request] とはしない(コードブロック外の地の文)",
         "```bash\ngit push origin feature/x\n```",

@@ -60,14 +60,28 @@ _記録なし_
 
 ## フェーズ5: 4段検証（ステップ6）
 
-- [ ] 段1: 静的検証
-  - [ ] `uv run pytest`
-  - [ ] `uv run ruff check`
-  - [ ] `uv run basedpyright`
-  - [ ] `git diff main --name-only` で U5・U6 の対象を含まないこと、`SKILL.md` の frontmatter に差分がないことを確認
-- [ ] 段2: 実挙動検証(スキルを読み込んで節を1回生成し、成果物を観察。検査器を main の旧ファイルへ当てて、旧い記述の箇所だけで失敗し、`development-guidelines` を含む行が含まれないことを確認)
-- [ ] 段3: コードレビューと指摘対応
-- [ ] 段4: スペック準拠検証と指摘対応
+- [x] 段1: 静的検証
+  - [x] `uv run pytest`(418 passed)
+  - [x] `uv run ruff check`(All checks passed)
+  - [x] `uv run basedpyright`(0 errors, 0 warnings)
+  - [x] `git diff main --name-only` で U5・U6 の対象を含まないこと、`SKILL.md` の frontmatter に差分がないことを確認(変更はスキル8ファイル・テスト1・ステアリング3。SKILL.md の差分は30行目以降だけ)
+- [x] 段2: 実挙動検証(スキルを読み込んで節を1回生成し、成果物を観察。検査器を main の旧ファイルへ当てて、旧い記述の箇所だけで失敗し、`development-guidelines` を含む行が含まれないことを確認)
+  - 検査器を main(262944e)の旧スキル30ファイルへ当てた(`git archive` で scratchpad に展開): 違反25件(git-flow-default 2、develop-branch 6、ci-auto-trigger 1、old-task-priority 16)。すべて旧い記述の箇所で、`development-guidelines` を含む行(11行。development-guidelines 自身の SKILL.md 4行と、他の5ファイルの6行と1行(.agents/.kiro の setup-project を含む))への誤検知は0件。旧 SKILL.md には AGENTS.md 優先の記述がないため、優先の検査も失敗する
+  - 現在のブランチの全スキル(30ファイル)では、テストが誤検知なく通る(段1の pytest に含む)
+  - スキルを読み込んで、架空の派生プロジェクト向けに「Git運用ルール」「PRプロセス」「CI(任意)」「データモデル」の節を1回生成した(scratchpad の `generated/sample-docs.md`)。作業ブランチ + PR → main、ローカル品質ゲート必須、CI は `workflow_dispatch` のみ、タスク属性は重要度(`TaskImportance`・`ImportanceEstimator`)、機能の優先度は P0 で書かれ、検査器の違反は0件。限界: 生成は著者と同じセッションで行った(独立の実行主体ではない)
+  - 観察の途中で、functional-design のデータモデル例のコメント位置が改名でずれていたため直した(1行)
+- [x] 段3: コードレビューと指摘対応
+  - `/code-review medium main`(別コンテキスト): important 3、nit 5、pre_existing 1。すべて正当と判断して修正した
+  - important(検査器の取りこぼし): (1) push / pull_request 以外の自動起動(`schedule`・`pull_request_target` 等)を見逃す → `on:` のイベントは `workflow_dispatch` 以外をすべて違反とする許可リスト方式に変えた (2) `"on":`、`on: # コメント`、`push: {…}` の書き方を見逃す → 対応した (3) `git checkout -b feature/x develop` 等の git コマンドの develop を見逃す → 規則を追加した。いずれも陽性例を追加した
+  - nit: (4) 入れ子のフェンス(```markdown の中の ```typescript)で開閉が反転する → 情報文字列付きのフェンスを入れ子の開始とみなすスタックにし、陽性・陰性例を追加した (5) SKILL.md の AGENTS.md 優先が「既存がある場合」の条件の内側だけにある → 「新規作成時」の行にも書いた (6) glossary の重要度の例で、値の定義(影響)と判断基準(期限)が食い違う → 判断基準を緊急性と影響の両軸にそろえた (7) `#優先度` のリンク先がない → 例に「優先度 (Priority)」の項目を加え、相互参照にした (8) process.md の PR テンプレートに品質ゲートの項目がない → 加えた
+  - pre_existing: (9) `.husky/pre-commit` の `npm run lint-staged` が未定義のスクリプト → `npx lint-staged` に直した(変更範囲内の例のため)
+  - 再検証(増分): `uv run pytest`(432 passed)、ruff・basedpyright は問題なし。検査器を変えたため main の旧ファイルへの適用をやり直し、結果は同じ(違反25件、`development-guidelines` を含む行への誤検知0件。入れ子のフェンスを含む process.md の CI 例も引き続き検出)
+- [x] 段4: スペック準拠検証と指摘対応
+  - implementation-validator(別コンテキストのサブエージェント): 重大・中の指摘なし。受け入れ条件は実装側で全件充足
+  - M1(`.claude/commands/review-docs.md` 53〜55行の「優先度: 高/中/低」、調査の見落とし): 承認範囲(スキル)外のアダプタのため、design.md に S12 として別 Issue で記録し、S10 の記述を補正した
+  - M2(design.md の変更対象表・「変更しない」の行が承認後の確定方針と矛盾): 修正した
+  - 軽微(functional-design の「高重要度/中重要度/低重要度」の語感): 「重要度が高い/中程度/低い」に改めた。テーブル罫線のずれは改名前からあるもので、対象外
+  - doc-reviewer: `docs/` の永続ドキュメントを変更していないため不要
 
 ## フェーズ6: 振り返りとドキュメント更新（ステップ7）
 

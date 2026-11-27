@@ -148,6 +148,7 @@ BREAKING CHANGE: Task型にimportance必須フィールド追加
 
 ## テスト
 ### 実施したテスト
+- [ ] ローカル品質ゲート `[品質ゲートのコマンド]` が全緑
 - [ ] ユニットテスト追加
 - [ ] 統合テスト追加
 - [ ] 手動テスト実施
@@ -419,7 +420,7 @@ jobs:
 ```
 ```bash
 # .husky/pre-commit
-npm run lint-staged
+npx lint-staged
 npm run typecheck
 ```
 

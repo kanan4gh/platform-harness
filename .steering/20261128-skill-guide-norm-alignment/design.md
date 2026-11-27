@@ -89,8 +89,9 @@
 | S7 | `repository-structure/template.md` 290〜305行 | `.gitignore` と `.prettierignore`/`.eslintignore` に `.steering/`(「タスク管理用の一時ファイル」)を入れる例 | AGENTS.md「履歴として保持」。ただし本リポジトリ自身も `.gitignore` で `.steering/*` を除外し(テンプレート複製対象外にするため)、作業分は強制追加で記録している | **別 Issue**(規範側で、派生プロジェクトの `.steering/` を git 管理するかが明文化されていない。スキルだけを直すと規範を先取りする。記録事項 R2) |
 | S8 | `prd-writing/SKILL.md` 166, 172, 271行 | 「優先順位の自動推定」「`--priority high`」(タスクの属性の意味) | 項目2 で決める用語 | **本作業で直す**(計画時は U6 への引き渡しとしたが、U6 #69 がマージ済みのため、承認時の指示で本作業に含めた) |
 | S9 | 設計スキル全般の例 | 例の技術スタックが TypeScript・ESLint・Vitest・Jest | AGENTS.md の技術スタック固有層は「プロダクトごとに書き換える」層であり、例の言語は規範と矛盾しない | **対象外**(矛盾ではない。記録のみ) |
-| S10 | `.claude/commands/`・`.claude/agents/`・`.agents/skills/`・`.kiro/skills/`・`.kiro/agents/`・`.codex/` | 手順書を参照する薄いラッパ。承認ゲート・ブランチ・PR・非対話 LLM の記述は手順書と一致 | — | **矛盾なし**(setup-project 関連は U6 が編集中のため、本調査では grep での確認にとどめた) |
+| S10 | `.claude/commands/`・`.claude/agents/`・`.agents/skills/`・`.kiro/skills/`・`.kiro/agents/`・`.codex/` | 手順書を参照する薄いラッパ。承認ゲート・ブランチ・PR・非対話 LLM の記述は手順書と一致 | — | **矛盾なし**(ブランチ・CI・承認・非対話 LLM の観点。用語は S12 を参照。setup-project 関連は本調査では grep での確認にとどめた) |
 | S11 | `steering`・`distill` スキル | 手順書を参照する薄いラッパ | — | **矛盾なし** |
+| S12 | `.claude/commands/review-docs.md` 53〜55行 | レビュー報告の例で、改善点の重みを `(優先度: 高/中/低)` と書く(「優先度」の第4の用法)。段4の検証で発見し、計画時の調査(S10)では見落としていた | 項目2 で「優先度」を P0〜P2 に固定した用語 | **別 Issue**(承認した範囲はスキルであり、コマンド(アダプタ)は含まない。直す場合は、スキルの「指摘の区分」と同じ語にそろえるのが自然。テストの対象 glob に `.claude/commands/` は入っておらず、コロン形式 `優先度: 高/中/低` も検出しない。検査を広げるかも、その Issue で決める) |
 
 ## 項目4: 整合性の機械的な担保(#58 の提案)
 
@@ -115,9 +116,10 @@
 | `.claude/skills/functional-design/guide.md` | タスク属性の型名・フィールド・推定器・UI 表・JSON 例を重要度へ(27行の P0 はそのまま) |
 | `.claude/skills/architecture-design/guide.md` | 例の推定処理を重要度へ |
 | `.claude/skills/glossary-creation/guide.md` | 用語例を「重要度」にし優先度との区別を追記、ステアリングファイルの例を「履歴として保持」へ、ディレクトリ例の名前 |
-| `tests/procedures/test_skill_norm_alignment.py` | 新規(4-B) |
+| `.claude/skills/prd-writing/SKILL.md` | タスク属性の3行(166・172・271行)を重要度へ(承認時の指示で追加) |
+| `tests/procedures/test_skill_norm_alignment.py` | 新規(4-B を絞った案) |
 
-変更しない: `AGENTS.md`、`.claude/skills/prd-writing/`、setup-project 関連、`repository-structure/template.md`(S7 は別 Issue)、全 `SKILL.md` の frontmatter。
+変更しない: `AGENTS.md`、prd-writing の上記3行以外、setup-project の手順・アダプタ、`repository-structure/template.md`(S7 は別 Issue)、全 `SKILL.md` の frontmatter。
 
 ## 検証方針
 
