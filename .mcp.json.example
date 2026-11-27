@@ -6,7 +6,7 @@
 // 【2層構造の原則】
 //   プラットフォーム層（GitHub、ファイルシステム等）
 //     → Claude Code のユーザー設定に配置（全プロジェクト共通）
-//   プロジェクト固有層（AWS、DB 等）
+//   プロジェクト固有層（クラウド、DB 等）
 //     → .mcp.json に配置（プロジェクトの技術スタックに応じて選択）
 //
 // 【追加手順】
@@ -14,35 +14,11 @@
 //   2. 接続情報・リージョン・DSN 等をプロジェクトに合わせて変更
 //   3. .mcp.json として保存（// コメントを除いた valid JSON にすること）
 //   4. Claude Code を再起動してサーバーが認識されたか確認
+//
+// クラウド等を使う場合の例は docs/procedures/tech-stack-switch.md の付録を参照。
+// 既定で有効なサーバーはない（下の例はすべてコメントアウト）。
 {
   "mcpServers": {
-
-    // ─── AWS プロジェクト ─────────────────────────────────────────────────
-    //
-    // aws-mcp: AWS サービスのドキュメント検索・API 呼び出し
-    //   - CDK や SAM でインフラを書くとき
-    //   - AWS サービスの仕様・料金を調べるとき
-    //   AWS_REGION を実際に使うリージョンに変更すること
-    "aws-mcp": {
-      "command": "uvx",
-      "args": [
-        "mcp-proxy-for-aws@latest",
-        "https://aws-mcp.us-east-1.api.aws/mcp",
-        "--metadata", "AWS_REGION=ap-northeast-1"
-      ]
-    },
-
-    // awslabs.aws-iac-mcp-server: CDK / CloudFormation の検証・ドキュメント検索
-    //   - CDK コードのレビュー・ベストプラクティス確認
-    //   - CloudFormation テンプレートの lint / compliance チェック
-    //   aws-mcp と組み合わせて使うと効果的
-    "awslabs.aws-iac-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.aws-iac-mcp-server@latest"],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
 
     // ─── データベース ─────────────────────────────────────────────────────
     //

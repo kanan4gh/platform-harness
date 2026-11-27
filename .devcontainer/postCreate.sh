@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# ハーネスの道具(uv・ruff・basedpyright)を入れる。プロダクトの技術スタックの道具は
+# docs/procedures/tech-stack-switch.md のチェックリストに従って足す
+
 # uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -13,14 +16,6 @@ export PATH="$HOME/.local/bin:$PATH"
 uv tool install ruff
 uv tool install basedpyright
 
-# AWS CDK
-npm install -g aws-cdk
-
-# AWS SAM CLI
-pip install aws-sam-cli
-
 # バージョン確認
 claude --version || true
-aws --version || true
-cdk --version || true
-sam --version || true
+uv --version || true

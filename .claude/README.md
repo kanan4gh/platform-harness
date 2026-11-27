@@ -206,7 +206,7 @@
 |---------|------------|------|
 | `prd-writing` | `docs/product-requirements.md` | ユーザーストーリー・受け入れ条件・成功指標を含むPRD |
 | `functional-design` | `docs/functional-design.md` | 機能一覧・入出力・UIフロー |
-| `architecture-design` | `docs/architecture.md` | システム構成・技術スタック・AWSアーキテクチャ・データ設計 |
+| `architecture-design` | `docs/architecture.md` | システム構成・技術スタック・インフラ構成・データ設計 |
 | `repository-structure` | `docs/repository-structure.md` | ディレクトリ構造・命名規則・依存関係ルール |
 | `development-guidelines` | `docs/development-guidelines.md` | ブランチ戦略・コーディング規約・テスト方針・デプロイ手順 |
 | `glossary-creation` | `docs/glossary.md` | プロジェクト固有用語の定義・ユビキタス言語 |

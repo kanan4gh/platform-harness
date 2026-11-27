@@ -41,21 +41,21 @@ _記録なし_
 
 ## フェーズ2: 技術スタック固有層と切り替え手順書（実装フェーズ / ステップ5）
 
-- [ ] `docs/procedures/tech-stack-switch.md` を新設（チェックリスト: 対象ファイル・順序・確認コマンド。付録: AWS を使う場合の例）
-- [ ] AGENTS.md 技術スタック固有層を「ハーネスの道具（固定）」+「記入欄 + 例1つ」へ書き換え
-- [ ] AGENTS.md の手順書一覧へ切り替え手順書を追加し、「技術スタックを変更するとき」から参照
-- [ ] AGENTS.md に `.steering/` を Git で追跡する旨を明文化
-- [ ] AGENTS.md の Issue・ステアリング規約から setup-project の例外を参照（U6 ①）
-- [ ] `distribution/template-manifest.json` の `include_paths` へ切り替え手順書を追加
+- [x] `docs/procedures/tech-stack-switch.md` を新設（チェックリスト: 対象ファイル・順序・確認コマンド。付録: AWS を使う場合の例）
+- [x] AGENTS.md 技術スタック固有層を「ハーネスの道具（固定）」+「記入欄 + 例1つ」へ書き換え
+- [x] AGENTS.md の手順書一覧へ切り替え手順書を追加し、「技術スタックを変更するとき」から参照
+- [x] AGENTS.md に `.steering/` を Git で追跡する旨を明文化
+- [x] AGENTS.md の Issue・ステアリング規約から setup-project の例外を参照（U6 ①）
+- [x] `distribution/template-manifest.json` の `include_paths` へ切り替え手順書を追加
 
 ## フェーズ3: AWS 前提の除去（実装フェーズ / ステップ5）
 
-- [ ] `.devcontainer/devcontainer.json` から AWS の feature・マウント・環境変数・拡張を外し、名前を変更
-- [ ] `.devcontainer/postCreate.sh` から CDK・SAM と AWS の確認を外す
-- [ ] `.mcp.json.example` から AWS の2サーバーを外す（手順書の例へ移したことを確認）
-- [ ] `docs/harness-guide.md` から AWS 前提を外し、手順の順序を整理（U6 ②: 手順5はプロダクト固有層のみ、setup-project の後に切り替え手順書）
-- [ ] `docs/architecture.md` の「AWSアーキテクチャ」を「インフラ構成」へ
-- [ ] `.claude/README.md` の「AWSアーキテクチャ」を「インフラ構成」へ
+- [x] `.devcontainer/devcontainer.json` から AWS の feature・マウント・環境変数・拡張を外し、名前を変更
+- [x] `.devcontainer/postCreate.sh` から CDK・SAM と AWS の確認を外す
+- [x] `.mcp.json.example` から AWS の2サーバーを外す（手順書の例へ移したことを確認）
+- [x] `docs/harness-guide.md` から AWS 前提を外し、手順の順序を整理（U6 ②: 手順5はプロダクト固有層のみ、setup-project の後に切り替え手順書）
+- [x] `docs/architecture.md` の「AWSアーキテクチャ」を「インフラ構成」へ
+- [x] `.claude/README.md` の「AWSアーキテクチャ」を「インフラ構成」へ
 
 ## フェーズ4: 設計スキルの中立化と担保テスト（実装フェーズ / ステップ5）
 
