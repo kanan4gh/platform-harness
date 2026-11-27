@@ -43,7 +43,7 @@ interface Task {
 
 // 拡張
 interface ExtendedTask extends Task {
-  priority: string;
+  importance: string;
 }
 
 // 型エイリアス: ユニオン型、プリミティブ型など
@@ -152,7 +152,7 @@ function calculateAndFormatPrice(items: CartItem[]): string {
 interface CreateTaskOptions {
   title: string;
   description?: string;
-  priority?: 'high' | 'medium' | 'low';
+  importance?: 'high' | 'medium' | 'low';
   dueDate?: Date;
 }
 
@@ -164,7 +164,7 @@ function createTask(options: CreateTaskOptions): Task {
 function createTask(
   title: string,
   description: string,
-  priority: string,
+  importance: string,
   dueDate: Date,
   tags: string[],
   assignee: string
@@ -320,7 +320,7 @@ async function fetchMultipleUsers(ids: string[]): Promise<User[]> {
  * ```typescript
  * const task = await createTask({
  *   title: '新しいタスク',
- *   priority: 'high'
+ *   importance: 'high'
  * });
  * ```
  */

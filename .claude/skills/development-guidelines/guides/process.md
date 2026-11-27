@@ -54,31 +54,26 @@ const repo = new Repository();
 
 ## Git運用ルール
 
-### ブランチ戦略（Git Flow採用）
+**規範の優先**: ブランチ・PR・品質確認の運用は、プロジェクトの `AGENTS.md`(SDDプロセス正典)と、それが参照する規範(外部自動化ポリシー等)が定める。本ガイドの記述がそれらと食い違う場合は、`AGENTS.md` を優先する。
 
-**Git Flowとは**:
-Vincent Driessenが提唱した、機能開発・リリース・ホットフィックスを体系的に管理するブランチモデル。明確な役割分担により、チーム開発での並行作業と安定したリリースを実現します。
+### ブランチ戦略（作業ブランチ + PR → main）
 
 **ブランチ構成**:
 ```
-main (本番環境)
-└── develop (開発・統合環境)
-    ├── feature/* (新機能開発)
-    ├── fix/* (バグ修正)
-    └── release/* (リリース準備)※必要に応じて
+main (リリース可能な状態を常に保つ)
+├── feature/* (新機能開発)
+├── fix/* (バグ修正)
+└── refactor/*、docs/*、chore/* (その他の作業)
 ```
 
 **運用ルール**:
-- **main**: 本番リリース済みの安定版コードのみを保持。タグでバージョン管理
-- **develop**: 次期リリースに向けた最新の開発コードを統合。CIでの自動テスト実施
-- **feature/\*、fix/\***: developから分岐し、作業完了後にPRでdevelopへマージ
-- **直接コミット禁止**: すべてのブランチでPRレビューを必須とし、コード品質を担保
-- **マージ方針**: feature→develop は squash merge、develop→main は merge commit を推奨
+- **main**: リリース可能な状態を保つ。リリースはmainからタグを付けて行う
+- **作業ブランチ**: 最新のmainから作業単位ごとに作成し、作業完了後にPRでmainへマージする
+- **mainへ直接コミットしない**: 機能実装の変更は必ず作業ブランチとPRを経る
+- **PR前の品質確認**: ローカル品質ゲート(後述の「品質チェックの自動化」)を全緑にしてからPRを作成する
+- **マージ方針**: squash merge または merge commit をプロジェクトで1つに決める
 
-**Git Flowのメリット**:
-- ブランチの役割が明確で、複数人での並行開発がしやすい
-- 本番環境(main)が常にクリーンな状態に保たれる
-- 緊急対応時はhotfixブランチで迅速に対応可能（必要に応じて導入）
+**より複雑なブランチモデルが必要になった場合**: 統合用ブランチやリリース用ブランチを置くモデルは、本ガイドで上書きして導入しない。先に `AGENTS.md` の規範を改め、本ガイドに基づく開発ガイドラインをそれに合わせる。
 
 ### コミットメッセージの規約
 
@@ -111,21 +106,21 @@ BREAKING CHANGE: 破壊的変更 (major version up)
 **良いコミットメッセージの例**:
 
 ```
-feat(task): 優先度設定機能を追加
+feat(task): 重要度設定機能を追加
 
-ユーザーがタスクに優先度(高/中/低)を設定できるようになりました。
+ユーザーがタスクに重要度(高/中/低)を設定できるようになりました。
 
 実装内容:
-- Taskモデルにpriorityフィールド追加
-- CLI に --priority オプション追加
-- 優先度によるソート機能実装
+- Taskモデルにimportanceフィールド追加
+- CLI に --importance オプション追加
+- 重要度によるソート機能実装
 
 破壊的変更:
 - Task型の構造が変更されました
 - 既存のタスクデータはマイグレーションが必要です
 
 Closes #123
-BREAKING CHANGE: Task型にpriority必須フィールド追加
+BREAKING CHANGE: Task型にimportance必須フィールド追加
 ```
 
 ### プルリクエストのテンプレート
@@ -285,7 +280,7 @@ const result = ids.map(id => taskMap.get(id));
 ```
 ```
 
-2. **優先度の明示**
+2. **指摘の区分の明示**
 ```markdown
 [必須] セキュリティ: パスワードがログに出力されています
 [推奨] パフォーマンス: ループ内でのDB呼び出しを避けましょう
@@ -363,11 +358,30 @@ const result = ids.map(id => taskMap.get(id));
 
 **実装方法**:
 
-**1. CI/CD (GitHub Actions)**
+**1. ローカル品質ゲート（必須の経路）**
+
+上の検査を1つのコマンドにまとめ、PR作成前に必ず実行して全緑を確認する。ネットワークや外部サービスに依存させず、誰の環境でも同じ結果になるようにする。
+
+```json
+// package.json
+{
+  "scripts": {
+    "quality-gate": "npm run lint && npm run typecheck && npm run test && npm run build"
+  }
+}
+```
+
+本プラットフォームでは `uv run python3 scripts/local_quality_gate.py` が該当する(テスト・lint・型検査・steering lint 等を固定順で実行する)。
+
+**2. CI (GitHub Actions)（任意）**
+
+CIは必須の経路にしない。利用権限と予算を確認した利用者が、手動実行の補助として使う。push・pull_request では自動起動せず、**CIの成功をPRの完了条件にしない**(外部自動化ポリシー `docs/external-automation-policy.md`)。
+
 ```yaml
 # .github/workflows/ci.yml
 name: CI
-on: [push, pull_request]
+on:
+  workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -383,7 +397,7 @@ jobs:
       - run: npm run build
 ```
 
-**2. Pre-commit フック (Husky 9.x + lint-staged)**
+**3. Pre-commit フック (Husky 9.x + lint-staged)（任意）**
 ```json
 // package.json
 {
@@ -411,7 +425,7 @@ npm run typecheck
 
 **導入効果**:
 - コミット前に自動チェックが走り、不具合コードの混入を防止
-- PR作成時に自動でCI実行され、マージ前に品質を担保
+- PR作成前にローカル品質ゲートを全緑にすることで、マージ前の品質を外部サービスに依存せず担保
 - 早期発見により、修正コストを最大80%削減（バグ検出が本番後の場合と比較）
 
 **この構成を選んだ理由**:
@@ -421,12 +435,12 @@ npm run typecheck
 
 ## チェックリスト
 
-- [ ] ブランチ戦略が決まっている
+- [ ] ブランチ戦略が AGENTS.md と一致している(作業ブランチ + PR → main)
 - [ ] コミットメッセージ規約が明確である
 - [ ] PRテンプレートが用意されている
 - [ ] テストの種類とカバレッジ目標が設定されている
 - [ ] コードレビュープロセスが定義されている
-- [ ] CI/CDパイプラインが構築されている
+- [ ] ローカル品質ゲート(単一コマンド)が定義されている(CIは任意で、成功を完了条件にしない)
 
 ## レビュー・検証の運用知見
 

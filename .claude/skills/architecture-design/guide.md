@@ -67,11 +67,11 @@ class CLI {
 ```typescript
 // 責務: ビジネスロジックの実装
 class TaskService {
-  // ビジネスロジック: 優先度の自動推定
+  // ビジネスロジック: 重要度の自動推定
   async create(data: CreateTaskData): Promise<Task> {
     const task = {
       ...data,
-      estimatedPriority: this.estimatePriority(data),
+      estimatedImportance: this.estimateImportance(data),
     };
     return this.repository.save(task);
   }
